@@ -1,44 +1,31 @@
 {
-  // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {
-    // File Layout
-    // "rootDir": "./src",
-    // "outDir": "./dist",
+    /* === Output Settings === */
+    "target": "ES2022",                        // Modern JS target (Node 18+)
+    "module": "ESNext",                        // ESM-style imports (works with TSX)
+    "moduleResolution": "Bundler",             // Simplifies module imports
+    "outDir": "dist",                          // Compiled files output
+    "rootDir": "src",                          // Source files directory
 
-    // Environment Settings
-    // See also https://aka.ms/tsconfig/module
-    "module": "nodenext",
-    "target": "esnext",
-    "types": [],
-    // For nodejs:
-    // "lib": ["esnext"],
-    // "types": ["node"],
-    // and npm install -D @types/node
+    /* === Type Checking & Interop === */
+    "strict": true,                            // Enable all strict checks
+    "esModuleInterop": true,                   // Allow default imports from CJS
+    "resolveJsonModule": true,                 // Allow importing JSON
+    "skipLibCheck": true,                      // Skip checking node_modules types
+    "forceConsistentCasingInFileNames": true,  // Prevent case issues
 
-    // Other Outputs
-    "sourceMap": true,
-    "declaration": true,
-    "declarationMap": true,
+    /* === Node Environment === */
+    "types": ["node"],                         // Use Node.js global types
+    "lib": ["ESNext"],                         // Include all modern JS features
 
-    // Stricter Typechecking Options
+    /* === Debugging & Dev Experience === */
+    "sourceMap": true,                         // Allow debugging in editors
+    "declaration": true,                       // Generate type declarations
+
+    /* === Optional Type Safety Tweaks === */
     "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
-
-    // Style Options
-    // "noImplicitReturns": true,
-    // "noImplicitOverride": true,
-    // "noUnusedLocals": true,
-    // "noUnusedParameters": true,
-    // "noFallthroughCasesInSwitch": true,
-    // "noPropertyAccessFromIndexSignature": true,
-
-    // Recommended Options
-    "strict": true,
-    "jsx": "react-jsx",
-    "verbatimModuleSyntax": true,
-    "isolatedModules": true,
-    "noUncheckedSideEffectImports": true,
-    "moduleDetection": "force",
-    "skipLibCheck": true,
-  }
+    "exactOptionalPropertyTypes": true
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
 }
