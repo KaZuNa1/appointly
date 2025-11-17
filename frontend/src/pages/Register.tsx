@@ -1,3 +1,7 @@
 export default function Register() {
-  return <div className="p-4">Register Page (skeleton)</div>;
+  return (
+    <div className="p-6 text-xl">
+      Register Page
+    </div>
+  );
 }

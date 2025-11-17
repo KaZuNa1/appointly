@@ -1,3 +1,7 @@
 export default function Home() {
-  return <div className="p-4">Home Page (skeleton)</div>;
+  return (
+    <div className="p-6 text-2xl font-bold">
+      Appointly is LIVE 🔥
+    </div>
+  );
 }

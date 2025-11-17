@@ -1,3 +1,7 @@
 export default function Login() {
-  return <div className="p-4">Login Page (skeleton)</div>;
+  return (
+    <div className="p-6 text-xl">
+      Login Page
+    </div>
+  );
 }
