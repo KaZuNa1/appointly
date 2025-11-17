@@ -1,15 +1,23 @@
-import express from 'express';
-import cors from 'cors';
-import routes from './routes/index.js';
-
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+import morgan from "morgan";
+import routes from "./routes/index";
 
 const app = express();
 
-// Middleware
+// === Core Middleware ===
 app.use(express.json());
 app.use(cors());
+app.use(helmet());
+app.use(morgan("dev"));
 
-// Routes
-app.use('/api', routes);
+// === Health Check Endpoint ===
+app.get("/health", (req, res) => {
+  res.json({ status: "ok" });
+});
+
+// === Main API Routes ===
+app.use("/api", routes);
 
 export default app;

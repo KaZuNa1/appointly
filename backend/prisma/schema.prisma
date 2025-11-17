@@ -1,63 +1,115 @@
+// =========================
+//  Prisma Schema - Appointly MVP
+// =========================
+
 generator client {
   provider = "prisma-client-js"
 }
 
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
+  datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+  }
 
-model User {
-  id          Int       @id @default(autoincrement())
-  name        String
-  email       String    @unique
-  password    String
-  role        Role      @default(USER)
-  bookings    Booking[]
-  createdAt   DateTime  @default(now())
-}
-
-model Provider {
-  id          Int       @id @default(autoincrement())
-  name        String
-  description String?
-  services    Service[]
-  bookings    Booking[]
-  createdAt   DateTime  @default(now())
-}
-
-model Service {
-  id          Int       @id @default(autoincrement())
-  name        String
-  duration    Int        // in minutes
-  price       Float
-  provider    Provider   @relation(fields: [providerId], references: [id])
-  providerId  Int
-  bookings    Booking[]
-}
-
-model Booking {
-  id          Int       @id @default(autoincrement())
-  user        User       @relation(fields: [userId], references: [id])
-  userId      Int
-  provider    Provider   @relation(fields: [providerId], references: [id])
-  providerId  Int
-  service     Service    @relation(fields: [serviceId], references: [id])
-  serviceId   Int
-  startTime   DateTime
-  endTime     DateTime
-  status      BookingStatus @default(PENDING)
-  createdAt   DateTime  @default(now())
-}
+// =========================
+//  ENUMS
+// =========================
 
 enum Role {
-  USER
+  CUSTOMER
   PROVIDER
   ADMIN
 }
 
-enum BookingStatus {
+enum AppointmentStatus {
   PENDING
   CONFIRMED
-  CANCELED
+  CANCELLED
+  COMPLETED
+}
+
+// =========================
+//  MODELS
+// =========================
+
+// USERS - both customers + providers
+model User {
+  id          String         @id @default(uuid())
+  email       String         @unique
+  password    String
+  fullName    String
+  role        Role           @default(CUSTOMER)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  // Relations
+  providerProfile BusinessProvider?
+  appointments     Appointment[]
+}
+
+// PROVIDER - only if user is provider
+model BusinessProvider {
+  id          String           @id @default(uuid())
+  userId      String           @unique
+  businessName  String
+  category      String          // salon, dentist, barber, spa, etc
+  phone         String?
+  description   String?
+  
+  // Location
+  address       String?
+  city          String?
+  district      String?
+
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  // Relations
+  user          User             @relation(fields: [userId], references: [id])
+  services      Service[]
+  hours         WorkingHours[]
+  appointments  Appointment[]
+}
+
+// SERVICES - what user can book
+model Service {
+  id          String        @id @default(uuid())
+  providerId  String
+  name        String
+  duration    Int           // in minutes
+  price       Int
+
+  // Relations
+  provider    BusinessProvider  @relation(fields: [providerId], references: [id])
+  appointments Appointment[]
+}
+
+// WORKING HOURS / SCHEDULE
+model WorkingHours {
+  id           String   @id @default(uuid())
+  providerId   String
+  dayOfWeek    Int      // 0 = Sunday … 6 = Saturday
+  openTime     String   // "09:00"
+  closeTime    String   // "18:00"
+
+  provider     BusinessProvider @relation(fields: [providerId], references: [id])
+}
+
+// APPOINTMENTS
+model Appointment {
+  id             String             @id @default(uuid())
+  customerId     String
+  providerId     String
+  serviceId      String
+  appointmentTime DateTime
+  status         AppointmentStatus  @default(PENDING)
+  notes          String?
+
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  // Relations
+  customer   User             @relation(fields: [customerId], references: [id])
+  provider   BusinessProvider @relation(fields: [providerId], references: [id])
+  service    Service          @relation(fields: [serviceId], references: [id])
 }

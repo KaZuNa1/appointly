@@ -1,30 +1,22 @@
 {
   "compilerOptions": {
-    /* === Output Settings === */
-    "target": "ES2022",                        // Modern JS target (Node 18+)
-    "module": "ESNext",                        // ESM-style imports (works with TSX)
-    "moduleResolution": "Bundler",             // Simplifies module imports
-    "outDir": "dist",                          // Compiled files output
-    "rootDir": "src",                          // Source files directory
+    "target": "ES2020",
+    "module": "CommonJS",
+    "lib": ["ES2020"],
+    "outDir": "./dist",
+    "rootDir": "./src",
 
-    /* === Type Checking & Interop === */
-    "strict": true,                            // Enable all strict checks
-    "esModuleInterop": true,                   // Allow default imports from CJS
-    "resolveJsonModule": true,                 // Allow importing JSON
-    "skipLibCheck": true,                      // Skip checking node_modules types
-    "forceConsistentCasingInFileNames": true,  // Prevent case issues
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
 
-    /* === Node Environment === */
-    "types": ["node"],                         // Use Node.js global types
-    "lib": ["ESNext"],                         // Include all modern JS features
+    "strict": true,
 
-    /* === Debugging & Dev Experience === */
-    "sourceMap": true,                         // Allow debugging in editors
-    "declaration": true,                       // Generate type declarations
+    "types": ["node"],
+    "moduleResolution": "node",
 
-    /* === Optional Type Safety Tweaks === */
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true
+    "sourceMap": true
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist"]
