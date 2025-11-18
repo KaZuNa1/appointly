@@ -6,18 +6,27 @@ import routes from "./routes/index";
 
 const app = express();
 
-// === Core Middleware ===
 app.use(express.json());
-app.use(cors());
+
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "https://appointly-bay.vercel.app",
+    ],
+    credentials: true,
+  })
+);
+
 app.use(helmet());
 app.use(morgan("dev"));
 
-// === Health Check Endpoint ===
+// Health check
 app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
-// === Main API Routes ===
+// Main API routes
 app.use("/api", routes);
 
 export default app;
