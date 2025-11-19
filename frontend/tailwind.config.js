@@ -6,7 +6,13 @@ module.exports = {
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        // shadcn/ui color tokens
+      },
+    },
   },
-  plugins: [],
-}
+  plugins: [
+    require("tailwindcss-animate"),
+  ],
+};

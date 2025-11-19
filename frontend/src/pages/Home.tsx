@@ -1,31 +1,31 @@
-import { useState } from "react";
-import { api } from "@/lib/api";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
+
+import Hero from "@/components/home/Hero";
+import Partners from "@/components/home/Partners";
+import Benefits from "@/components/home/Benefits";
+import Steps from "@/components/home/Steps";
+import Pricing from "@/components/home/Pricing";
 
 export default function Home() {
-  const [response, setResponse] = useState("");
-
-  const testConnection = async () => {
-    try {
-      const res = await api.get("/test");
-      setResponse(res.data.msg || "Success!");
-    } catch (error) {
-      setResponse("❌ Failed to connect to backend");
-      console.error(error);
-    }
-  };
-
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold mb-6">Appointly is LIVE 🔥</h1>
+    <div className="min-h-screen flex flex-col">
+      
+      {/* Navbar */}
+      <Navbar />
 
-      <button
-        onClick={testConnection}
-        className="px-4 py-2 bg-black text-white rounded-lg hover:opacity-80 transition"
-      >
-        Test Backend Connection
-      </button>
+      {/* Page Content */}
+      <main className="flex-1">
+        <Hero />
+        <Partners />
+        <Benefits />
+        <Steps />
+        <Pricing />
+      </main>
 
-      <p className="mt-4 text-lg">{response}</p>
+      {/* Footer */}
+      <Footer />
+
     </div>
   );
 }
