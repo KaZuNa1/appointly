@@ -1,136 +1,76 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import BusinessCategorySelect from "./BusinessCategorySelect";
+import React from "react";
+import InputField from "@/components/auth/InputField";
+import PasswordField from "@/components/auth/PasswordField";
 
-export default function BusinessForm() {
-  const [form, setForm] = useState({
-    businessName: "",
-    category: "",
-    description: "",
-    location: "",
-    phone: "",
-    ownerName: "",
-    email: "",
-    password: "",
-  });
+interface Props {
+  value: any;
+  onChange: (field: string, value: string) => void;
+}
 
-  const update = (field: string, value: string) => {
-    setForm({ ...form, [field]: value });
-  };
-
-  const submit = () => {
-    console.log("Business registered:", form);
-    alert("Business registration submitted! (Backend connection pending)");
-  };
-
+export default function BusinessForm({ value, onChange }: Props) {
   return (
-    <div className="space-y-6">
-      {/* Business Name */}
-      <div>
-        <label className="block font-medium text-gray-700 mb-1">
-          Бизнесийн нэр
-        </label>
-        <input
-          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none"
-          placeholder="Жишээ: Deluxe Barber Shop"
-          value={form.businessName}
-          onChange={(e) => update("businessName", e.target.value)}
-        />
-      </div>
-
-      {/* Category */}
-      <BusinessCategorySelect
-        value={form.category}
-        onChange={(v) => update("category", v)}
+    <div className="space-y-4">
+      <InputField
+        label="Бүтэн нэр"
+        value={value.fullName}
+        onChange={(v) => onChange("fullName", v)}
       />
 
-      {/* Description */}
-      <div>
-        <label className="block font-medium text-gray-700 mb-1">
-          Танилцуулга
-        </label>
-        <textarea
-          className="w-full border border-gray-300 rounded-lg px-4 py-3 h-28 resize-none focus:ring-2 focus:ring-indigo-500 outline-none"
-          placeholder="Үйлчилгээний товч танилцуулга..."
-          value={form.description}
-          onChange={(e) => update("description", e.target.value)}
-        />
-      </div>
+      <InputField
+        label="Имэйл"
+        type="email"
+        value={value.email}
+        onChange={(v) => onChange("email", v)}
+      />
 
-      {/* Location */}
-      <div>
-        <label className="block font-medium text-gray-700 mb-1">
-          Байршил
-        </label>
-        <input
-          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none"
-          placeholder="Баянзүрх дүүрэг, 26-р хороо..."
-          value={form.location}
-          onChange={(e) => update("location", e.target.value)}
-        />
-      </div>
+      <PasswordField
+        label="Нууц үг"
+        value={value.password}
+        onChange={(v) => onChange("password", v)}
+      />
 
-      {/* Phone */}
-      <div>
-        <label className="block font-medium text-gray-700 mb-1">
-          Утас
-        </label>
-        <input
-          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none"
-          placeholder="88112233"
-          value={form.phone}
-          onChange={(e) => update("phone", e.target.value)}
-        />
-      </div>
+      <InputField
+        label="Бизнесийн нэр"
+        value={value.businessName}
+        onChange={(v) => onChange("businessName", v)}
+      />
 
-      {/* Owner Info */}
-      <h2 className="text-xl font-semibold text-gray-800 mt-8">
-        Эзэмшигчийн мэдээлэл
-      </h2>
+      <InputField
+        label="Бизнесийн төрөл"
+        placeholder="Жишээ: Салон, Шүдний эмнэлэг, Спорт клуб..."
+        value={value.category}
+        onChange={(v) => onChange("category", v)}
+      />
 
-      {/* Owner Name */}
-      <div>
-        <label className="block font-medium text-gray-700 mb-1">
-          Эзэмшигчийн нэр
-        </label>
-        <input
-          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none"
-          placeholder="Жишээ: Бат-Оргил"
-          value={form.ownerName}
-          onChange={(e) => update("ownerName", e.target.value)}
-        />
-      </div>
+      <InputField
+        label="Утасны дугаар"
+        value={value.phone}
+        onChange={(v) => onChange("phone", v)}
+      />
 
-      {/* Email */}
-      <div>
-        <label className="block font-medium text-gray-700 mb-1">И-мэйл</label>
-        <input
-          type="email"
-          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none"
-          placeholder="business@example.com"
-          value={form.email}
-          onChange={(e) => update("email", e.target.value)}
-        />
-      </div>
+      <InputField
+        label="Хот"
+        value={value.city}
+        onChange={(v) => onChange("city", v)}
+      />
 
-      {/* Password */}
-      <div>
-        <label className="block font-medium text-gray-700 mb-1">
-          Нууц үг
-        </label>
-        <input
-          type="password"
-          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none"
-          placeholder="•••••••••"
-          value={form.password}
-          onChange={(e) => update("password", e.target.value)}
-        />
-      </div>
+      <InputField
+        label="Дүүрэг"
+        value={value.district}
+        onChange={(v) => onChange("district", v)}
+      />
 
-      {/* Submit */}
-      <Button className="w-full py-3 text-lg" onClick={submit}>
-        Бүртгүүлэх
-      </Button>
+      <InputField
+        label="Хаяг"
+        value={value.address}
+        onChange={(v) => onChange("address", v)}
+      />
+
+      <InputField
+        label="Тайлбар"
+        value={value.description}
+        onChange={(v) => onChange("description", v)}
+      />
     </div>
   );
 }

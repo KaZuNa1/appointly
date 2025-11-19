@@ -1,24 +1,60 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import AuthCard from "@/components/auth/AuthCard";
 import InputField from "@/components/auth/InputField";
 import PasswordField from "@/components/auth/PasswordField";
 import { Button } from "@/components/ui/button";
 
+import api from "@/lib/api";
+import { saveToken } from "@/lib/auth";
+
 export default function Login() {
+  const navigate = useNavigate();
+
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email || !pass) {
       alert("Имэйл болон нууц үгээ оруулна уу.");
       return;
     }
 
-    // TODO: Integrate real backend:
-    // const res = await api.post("/auth/login", { email, pass });
+    try {
+      setLoading(true);
 
-    alert("Logged in (frontend mock)!");
+      const res = await api.post("/auth/login", {
+        email,
+        password: pass,
+      });
+
+      const { token, user } = res.data;
+
+      // Save JWT token
+      saveToken(token);
+
+      alert("Амжилттай нэвтэрлээ!");
+
+      // Role-based redirect
+      if (user.role === "PROVIDER") {
+        navigate("/provider/dashboard");
+      } else {
+        navigate("/dashboard");
+      }
+
+    } catch (err: any) {
+      console.error("LOGIN ERROR:", err);
+
+      const msg =
+        err?.response?.data?.msg ||
+        err?.response?.data?.message ||
+        "Сервер алдаа гарлаа.";
+
+      alert(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -45,8 +81,9 @@ export default function Login() {
       <Button
         className="w-full mt-4 h-12 text-base"
         onClick={handleLogin}
+        disabled={loading}
       >
-        Нэвтрэх
+        {loading ? "Түр хүлээнэ үү..." : "Нэвтрэх"}
       </Button>
 
       <p className="text-center text-gray-600 mt-6">

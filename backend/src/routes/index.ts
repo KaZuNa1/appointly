@@ -1,18 +1,27 @@
-import express from "express";
+import { Router } from "express";
+import authRoutes from "./auth.routes";
+import providerRoutes from "./provider.routes";
 
-const router = express.Router();
+const router = Router();
 
-// Health check
+/* HEALTH */
 router.get("/health", (req, res) => {
   res.json({ status: "OK" });
 });
 
-// Test route to check frontend ↔ backend connection
+/* TEST */
 router.get("/test", (req, res) => {
   res.json({
     ok: true,
     msg: "Backend is talking to Frontend 🔥",
   });
 });
+
+/* AUTH */
+router.use("/auth", authRoutes);
+
+/* PROVIDERS */
+router.use("/providers", providerRoutes); 
+// This creates /api/providers
 
 export default router;

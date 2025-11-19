@@ -1,15 +1,15 @@
 // =========================
-//  Prisma Schema - Appointly MVP
+//  Prisma Schema - Appointly MVP (UPDATED FINAL)
 // =========================
 
 generator client {
   provider = "prisma-client-js"
 }
 
-  datasource db {
-    provider = "postgresql"
-    url      = env("DATABASE_URL")
-  }
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
 
 // =========================
 //  ENUMS
@@ -47,15 +47,15 @@ model User {
   appointments     Appointment[]
 }
 
-// PROVIDER - only if user is provider
+// PROVIDER PROFILE
 model BusinessProvider {
-  id          String           @id @default(uuid())
-  userId      String           @unique
+  id            String           @id @default(uuid())
+  userId        String           @unique
   businessName  String
-  category      String          // salon, dentist, barber, spa, etc
+  category      String
   phone         String?
   description   String?
-  
+
   // Location
   address       String?
   city          String?
@@ -71,26 +71,25 @@ model BusinessProvider {
   appointments  Appointment[]
 }
 
-// SERVICES - what user can book
+// SERVICES OFFERED BY PROVIDERS
 model Service {
   id          String        @id @default(uuid())
   providerId  String
   name        String
-  duration    Int           // in minutes
+  duration    Int
   price       Int
 
-  // Relations
-  provider    BusinessProvider  @relation(fields: [providerId], references: [id])
+  provider    BusinessProvider @relation(fields: [providerId], references: [id])
   appointments Appointment[]
 }
 
-// WORKING HOURS / SCHEDULE
+// WEEKLY WORKING HOURS
 model WorkingHours {
   id           String   @id @default(uuid())
   providerId   String
-  dayOfWeek    Int      // 0 = Sunday … 6 = Saturday
-  openTime     String   // "09:00"
-  closeTime    String   // "18:00"
+  dayOfWeek    Int
+  openTime     String 
+  closeTime    String
 
   provider     BusinessProvider @relation(fields: [providerId], references: [id])
 }
@@ -108,7 +107,6 @@ model Appointment {
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 
-  // Relations
   customer   User             @relation(fields: [customerId], references: [id])
   provider   BusinessProvider @relation(fields: [providerId], references: [id])
   service    Service          @relation(fields: [serviceId], references: [id])

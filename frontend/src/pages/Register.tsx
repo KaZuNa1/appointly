@@ -1,17 +1,22 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import AuthCard from "@/components/auth/AuthCard";
 import InputField from "@/components/auth/InputField";
 import PasswordField from "@/components/auth/PasswordField";
 import { Button } from "@/components/ui/button";
+import api from "@/lib/api";
+import { saveToken } from "@/lib/auth";
 
 export default function Register() {
+  const navigate = useNavigate();
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [confirmPass, setConfirmPass] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     if (!name || !email || !pass || !confirmPass) {
       alert("Бүх талбарыг бөглөнө үү.");
       return;
@@ -22,19 +27,44 @@ export default function Register() {
       return;
     }
 
-    // TODO: integrate with backend later
-    alert("User registered (frontend mock)!");
+    try {
+      setLoading(true);
+
+      const res = await api.post("/auth/register", {
+        fullName: name,
+        email: email,
+        password: pass,
+      });
+
+      // Save JWT
+      saveToken(res.data.token);
+
+      alert("Амжилттай бүртгэгдлээ!");
+
+      // Redirect user → dashboard
+      navigate("/dashboard");
+
+    } catch (err: any) {
+      console.error("REGISTER ERROR:", err);
+
+      const msg =
+        err?.response?.data?.msg ||
+        err?.response?.data?.message ||
+        "Сервер алдаа гарлаа.";
+
+      alert(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <AuthCard>
-      {/* Title */}
       <h1 className="text-3xl font-bold text-center mb-2">Бүртгүүлэх</h1>
       <p className="text-gray-600 text-center mb-8">
         Аппоинтлид тавтай морил! Доорх мэдээллээ бүрдүүлнэ үү.
       </p>
 
-      {/* INPUTS */}
       <InputField
         label="Нэр"
         placeholder="Таны нэр"
@@ -44,8 +74,8 @@ export default function Register() {
 
       <InputField
         label="Имэйл"
-        placeholder="example@gmail.com"
         type="email"
+        placeholder="example@gmail.com"
         value={email}
         onChange={setEmail}
       />
@@ -62,15 +92,14 @@ export default function Register() {
         onChange={setConfirmPass}
       />
 
-      {/* BUTTON */}
       <Button
         className="w-full mt-4 h-12 text-base"
         onClick={handleRegister}
+        disabled={loading}
       >
-        Бүртгүүлэх
+        {loading ? "Түр хүлээнэ үү..." : "Бүртгүүлэх"}
       </Button>
 
-      {/* Login redirect */}
       <p className="text-center text-gray-600 mt-6">
         Аль хэдийн бүртгэлтэй юу?{" "}
         <Link to="/login" className="text-indigo-600 font-medium">
@@ -78,11 +107,9 @@ export default function Register() {
         </Link>
       </p>
 
-      {/* BUSINESS REGISTER (new section) */}
+      {/* Business option */}
       <div className="mt-10 pt-6 border-t text-center">
-        <p className="text-sm text-gray-600 mb-2">
-          Бизнес эрхлэгч үү?
-        </p>
+        <p className="text-sm text-gray-600 mb-2">Бизнес эрхлэгч үү?</p>
         <Link
           to="/business/register"
           className="text-indigo-600 font-semibold hover:underline"
