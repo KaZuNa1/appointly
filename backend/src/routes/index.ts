@@ -1,6 +1,10 @@
 import { Router } from "express";
 import authRoutes from "./auth.routes";
 import providerRoutes from "./provider.routes";
+import serviceRoutes from "./service.routes";
+import scheduleRoutes from "./schedule.routes";
+import slotsRoutes from "./slots.routes";
+import bookingRoutes from "./booking.routes";
 
 const router = Router();
 
@@ -21,7 +25,23 @@ router.get("/test", (req, res) => {
 router.use("/auth", authRoutes);
 
 /* PROVIDERS */
-router.use("/providers", providerRoutes); 
+router.use("/providers", providerRoutes);
 // This creates /api/providers
+
+/* SERVICES */
+router.use("/services", serviceRoutes);
+// This creates /api/services
+
+/* SCHEDULES */
+router.use("/schedules", scheduleRoutes);
+// This creates /api/schedules
+
+/* SLOTS */
+router.use("/slots", slotsRoutes);
+// This creates /api/slots
+
+/* BOOKINGS */
+router.use("/bookings", bookingRoutes);
+// This creates /api/bookings
 
 export default router;

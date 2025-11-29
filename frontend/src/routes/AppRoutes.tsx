@@ -1,4 +1,5 @@
 import { Routes, Route } from "react-router-dom";
+import { ProtectedRoute } from "./ProtectedRoute";
 
 // MAIN PAGES
 import Home from "@/pages/Home";
@@ -30,7 +31,7 @@ export function AppRoutes() {
       <Route path="/" element={<Home />} />
       <Route path="/services" element={<Services />} />
       <Route path="/providers" element={<Providers />} />
-      <Route path="/provider/:id" element={<ProviderProfile />} />
+      <Route path="/providers/:id" element={<ProviderProfile />} />
 
       {/* =======================
           BOOKING FLOW
@@ -49,14 +50,28 @@ export function AppRoutes() {
       <Route path="/business/register" element={<BusinessRegister />} />
 
       {/* =======================
-          USER DASHBOARD
+          USER DASHBOARD (CUSTOMERS ONLY)
       ======================== */}
-      <Route path="/dashboard" element={<Dashboard />} />
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute role="CUSTOMER">
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
 
       {/* =======================
-          PROVIDER DASHBOARD
+          PROVIDER DASHBOARD (PROVIDERS ONLY)
       ======================== */}
-      <Route path="/provider/dashboard" element={<ProviderDashboard />} />
+      <Route
+        path="/provider/dashboard"
+        element={
+          <ProtectedRoute role="PROVIDER">
+            <ProviderDashboard />
+          </ProtectedRoute>
+        }
+      />
 
     </Routes>
   );

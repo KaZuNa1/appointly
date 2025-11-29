@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import Navbar from "@/components/layout/Navbar";
 import BusinessForm from "@/components/business/BusinessForm";
+import { useAuth } from "@/contexts/AuthContext";
 import api from "@/lib/api";
 import { saveToken } from "@/lib/auth";
 
 export default function BusinessRegister() {
   const navigate = useNavigate();
+  const { refreshUser } = useAuth();
 
   const [form, setForm] = useState({
     fullName: "",
@@ -38,6 +41,9 @@ export default function BusinessRegister() {
         saveToken(res.data.token); // save JWT to localStorage
       }
 
+      // Refresh user state in AuthContext
+      await refreshUser();
+
       alert("Бизнес амжилттай бүртгэгдлээ!");
       navigate("/provider/dashboard"); // Go to provider dashboard
     } catch (err: any) {
@@ -47,8 +53,10 @@ export default function BusinessRegister() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-6">
-      <div className="bg-white shadow-lg rounded-2xl p-10 w-full max-w-3xl">
+    <div className="min-h-screen bg-gray-50">
+      <Navbar />
+      <div className="flex items-center justify-center px-6 py-12">
+        <div className="bg-white shadow-lg rounded-2xl p-10 w-full max-w-3xl">
 
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
           Бизнесээ бүртгүүлэх
@@ -74,6 +82,7 @@ export default function BusinessRegister() {
           </Link>
         </p>
 
+        </div>
       </div>
     </div>
   );

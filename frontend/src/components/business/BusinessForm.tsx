@@ -1,6 +1,7 @@
 import React from "react";
 import InputField from "@/components/auth/InputField";
 import PasswordField from "@/components/auth/PasswordField";
+import { BUSINESS_TYPES } from "@/data/businessTypes";
 
 interface Props {
   value: any;
@@ -35,12 +36,23 @@ export default function BusinessForm({ value, onChange }: Props) {
         onChange={(v) => onChange("businessName", v)}
       />
 
-      <InputField
-        label="Бизнесийн төрөл"
-        placeholder="Жишээ: Салон, Шүдний эмнэлэг, Спорт клуб..."
-        value={value.category}
-        onChange={(v) => onChange("category", v)}
-      />
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Бизнесийн төрөл
+        </label>
+        <select
+          value={value.category}
+          onChange={(e) => onChange("category", e.target.value)}
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+        >
+          <option value="">Бизнесийн төрөл сонгох</option>
+          {BUSINESS_TYPES.map((type) => (
+            <option key={type.id} value={type.name}>
+              {type.label}
+            </option>
+          ))}
+        </select>
+      </div>
 
       <InputField
         label="Утасны дугаар"

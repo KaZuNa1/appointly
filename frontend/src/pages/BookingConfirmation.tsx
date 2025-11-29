@@ -1,5 +1,6 @@
 import { useParams, Link } from "react-router-dom";
 import { CheckCircle } from "lucide-react";
+import Navbar from "@/components/layout/Navbar";
 import BookingSummary from "@/components/booking/BookingSummary";
 import BookingInfoCard from "@/components/booking/BookingInfoCard";
 import BookingActions from "@/components/booking/BookingActions";
@@ -19,7 +20,9 @@ export default function BookingConfirmation() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center py-20 px-6">
+    <div className="min-h-screen bg-gray-50">
+      <Navbar />
+      <div className="flex flex-col items-center py-20 px-6">
       <div className="bg-white rounded-2xl shadow-md p-10 max-w-xl w-full">
         
         <BookingSummary
@@ -31,6 +34,7 @@ export default function BookingConfirmation() {
 
         <BookingActions providerName={booking.providerName} />
 
+      </div>
       </div>
     </div>
   );

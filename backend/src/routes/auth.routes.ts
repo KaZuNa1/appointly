@@ -20,4 +20,13 @@ router.post("/login", authController.login);
 // Get profile of logged-in user (JWT required)
 router.get("/me", authMiddleware, authController.getProfile);
 
+// Update profile (fullName)
+router.put("/profile", authMiddleware, authController.updateProfile);
+
+// Update email
+router.put("/email", authMiddleware, authController.updateEmail);
+
+// Update password
+router.put("/password", authMiddleware, authController.updatePassword);
+
 export default router;

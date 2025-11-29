@@ -1,15 +1,18 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import Navbar from "@/components/layout/Navbar";
 import AuthCard from "@/components/auth/AuthCard";
 import InputField from "@/components/auth/InputField";
 import PasswordField from "@/components/auth/PasswordField";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 
 import api from "@/lib/api";
 import { saveToken } from "@/lib/auth";
 
 export default function Login() {
   const navigate = useNavigate();
+  const { refreshUser } = useAuth();
 
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
@@ -33,6 +36,9 @@ export default function Login() {
 
       // Save JWT token
       saveToken(token);
+
+      // Refresh user state in AuthContext
+      await refreshUser();
 
       alert("Амжилттай нэвтэрлээ!");
 
@@ -58,7 +64,9 @@ export default function Login() {
   };
 
   return (
-    <AuthCard>
+    <div className="min-h-screen bg-gray-50">
+      <Navbar />
+      <AuthCard>
       <h1 className="text-3xl font-bold text-center mb-2">Нэвтрэх</h1>
       <p className="text-gray-600 text-center mb-8">
         Аппоинтли хэрэглэгчийн нэвтрэлт
@@ -92,6 +100,7 @@ export default function Login() {
           Бүртгүүлэх
         </Link>
       </p>
-    </AuthCard>
+      </AuthCard>
+    </div>
   );
 }

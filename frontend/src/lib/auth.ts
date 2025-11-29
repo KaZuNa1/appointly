@@ -15,7 +15,7 @@ export function getToken(): string | null {
 // Delete JWT (logout)
 export function logout() {
   localStorage.removeItem(TOKEN_KEY);
-  window.location.href = "/login"; // redirect to login
+  window.location.href = "/"; // redirect to home
 }
 
 // Check if user is logged in

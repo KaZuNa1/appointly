@@ -166,3 +166,95 @@ export const getProfile = async (req: any, res: Response) => {
     return res.status(500).json({ msg: "Сервер алдаа гарлаа." });
   }
 };
+
+// ----------------------
+// 5. UPDATE PROFILE (fullName)
+// ----------------------
+export const updateProfile = async (req: any, res: Response) => {
+  try {
+    const userId = req.user.id;
+    const { fullName } = req.body;
+
+    if (!fullName) {
+      return res.status(400).json({ msg: "Нэр оруулна уу." });
+    }
+
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { fullName }
+    });
+
+    return res.status(200).json({ msg: "Амжилттай шинэчлэгдлээ!", user });
+  } catch (err) {
+    console.error("UPDATE PROFILE ERROR:", err);
+    return res.status(500).json({ msg: "Сервер алдаа гарлаа." });
+  }
+};
+
+// ----------------------
+// 6. UPDATE EMAIL
+// ----------------------
+export const updateEmail = async (req: any, res: Response) => {
+  try {
+    const userId = req.user.id;
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ msg: "Имэйл оруулна уу." });
+    }
+
+    // Check if email already exists
+    const exists = await prisma.user.findUnique({ where: { email } });
+    if (exists && exists.id !== userId) {
+      return res.status(400).json({ msg: "Имэйл бүртгэлтэй байна." });
+    }
+
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { email }
+    });
+
+    return res.status(200).json({ msg: "Имэйл амжилттай солигдлоо!", user });
+  } catch (err) {
+    console.error("UPDATE EMAIL ERROR:", err);
+    return res.status(500).json({ msg: "Сервер алдаа гарлаа." });
+  }
+};
+
+// ----------------------
+// 7. UPDATE PASSWORD
+// ----------------------
+export const updatePassword = async (req: any, res: Response) => {
+  try {
+    const userId = req.user.id;
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ msg: "Бүх талбарыг бөглөнө үү." });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      return res.status(404).json({ msg: "Хэрэглэгч олдсонгүй." });
+    }
+
+    // Verify current password
+    const ok = await bcrypt.compare(currentPassword, user.password);
+    if (!ok) {
+      return res.status(400).json({ msg: "Одоогийн нууц үг буруу байна." });
+    }
+
+    // Hash new password
+    const hashed = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashed }
+    });
+
+    return res.status(200).json({ msg: "Нууц үг амжилттай солигдлоо!" });
+  } catch (err) {
+    console.error("UPDATE PASSWORD ERROR:", err);
+    return res.status(500).json({ msg: "Сервер алдаа гарлаа." });
+  }
+};
