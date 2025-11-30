@@ -22,24 +22,8 @@ router.post("/", authMiddleware, async (req: any, res: Response) => {
     const endOfDay = new Date(appointmentDate);
     endOfDay.setHours(23, 59, 59, 999);
 
-    // VALIDATION 1: Check if customer already has an active booking for THIS SERVICE (any date)
-    const existingServiceBooking = await prisma.appointment.findFirst({
-      where: {
-        customerId,
-        serviceId,
-        status: {
-          in: ["PENDING", "CONFIRMED"],
-        },
-      },
-    });
-
-    if (existingServiceBooking) {
-      return res.status(400).json({
-        msg: "Та энэ үйлчилгээг аль хэдийн захиалсан байна. Нэг үйлчилгээг зөвхөн нэг удаа захиалах боломжтой.",
-      });
-    }
-
-    // VALIDATION 2: Check if customer already has a booking for THIS SERVICE on THIS DAY
+    // VALIDATION 1: Check if customer already has a booking for THIS SERVICE on THIS DAY
+    // (Can book same service on different days, but not twice on same day)
     const existingServiceBookingToday = await prisma.appointment.findFirst({
       where: {
         customerId,
@@ -56,7 +40,7 @@ router.post("/", authMiddleware, async (req: any, res: Response) => {
 
     if (existingServiceBookingToday) {
       return res.status(400).json({
-        msg: "Та энэ үйлчилгээг өнөөдөр аль хэдийн захиалсан байна. Нэг үйлчилгээг нэг өдрийн дотор зөвхөн нэг удаа захиалах боломжтой.",
+        msg: "Та энэ үйлчилгээг энэ өдөр аль хэдийн захиалсан байна. Нэг үйлчилгээг нэг өдөрт зөвхөн нэг удаа захиалах боломжтой.",
       });
     }
 
@@ -69,7 +53,7 @@ router.post("/", authMiddleware, async (req: any, res: Response) => {
       return res.status(404).json({ msg: "Uilchilgee oldsongui" });
     }
 
-    // VALIDATION 3: Check if provider has schedule for this date
+    // VALIDATION 2: Check if provider has schedule for this date
     const schedule = await prisma.workingHours.findFirst({
       where: {
         providerId,
@@ -86,7 +70,7 @@ router.post("/", authMiddleware, async (req: any, res: Response) => {
       });
     }
 
-    // VALIDATION 4: Check if time slot is within working hours
+    // VALIDATION 3: Check if time slot is within working hours
     const appointmentHour = appointmentDate.getHours();
     const appointmentMin = appointmentDate.getMinutes();
     const appointmentMinutes = appointmentHour * 60 + appointmentMin;
@@ -103,7 +87,7 @@ router.post("/", authMiddleware, async (req: any, res: Response) => {
       });
     }
 
-    // VALIDATION 5: Check if slot is not already booked by others (no overlapping time slots)
+    // VALIDATION 4: Check if time slot doesn't conflict with other bookings (no overlapping)
     const existingBookings = await prisma.appointment.findMany({
       where: {
         providerId,
