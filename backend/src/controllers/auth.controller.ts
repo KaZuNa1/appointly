@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { prisma } from "../config/db";
 import { Role } from "@prisma/client";
+import { logLogin } from "../utils/audit";
 
 const generateToken = (user: any) => {
   return jwt.sign(
@@ -133,6 +134,9 @@ export const login = async (req: Request, res: Response) => {
     const ok = await bcrypt.compare(password, user.password);
     if (!ok)
       return res.status(400).json({ msg: "Нууц үг буруу байна." });
+
+    // Log the login action
+    await logLogin(user.id, { email: user.email });
 
     return res.status(200).json({
       msg: "Амжилттай нэвтэрлээ!",

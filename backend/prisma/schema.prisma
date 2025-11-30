@@ -114,3 +114,17 @@ model Appointment {
   provider   BusinessProvider @relation(fields: [providerId], references: [id])
   service    Service          @relation(fields: [serviceId], references: [id])
 }
+
+// AUDIT LOGS - Track all user actions
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String   // LOGIN, BOOKING_CREATED, BOOKING_CANCELLED, PROFILE_UPDATED, etc
+  entityId  String?  // ID of affected resource (booking ID, profile ID, etc)
+  details   Json?    // Additional details about the action
+  timestamp DateTime @default(now())
+
+  @@index([userId])
+  @@index([timestamp])
+  @@index([action])
+}

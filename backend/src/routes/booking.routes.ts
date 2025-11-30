@@ -1,6 +1,7 @@
 import { Router, Response } from "express";
 import { authMiddleware } from "../middleware/auth.middleware";
 import { prisma } from "../config/db";
+import { logBookingAction } from "../utils/audit";
 
 const router = Router();
 
@@ -163,6 +164,14 @@ router.post("/", authMiddleware, async (req: any, res: Response) => {
       },
     });
 
+    // Log booking creation
+    await logBookingAction(customerId, "BOOKING_CREATED", appointment.id, {
+      serviceId,
+      providerId,
+      appointmentTime: appointmentDate,
+      serviceName: appointment.service.name,
+    });
+
     return res.status(201).json({
       msg: "Tsag amjilttай zaхialagudsaa",
       appointment,
@@ -246,6 +255,7 @@ router.patch("/:id/status", authMiddleware, async (req: any, res: Response) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
+    const userId = req.user.id;
 
     if (!["PENDING", "CONFIRMED", "CANCELLED", "COMPLETED"].includes(status)) {
       return res.status(400).json({ msg: "Buruу status" });
@@ -255,6 +265,19 @@ router.patch("/:id/status", authMiddleware, async (req: any, res: Response) => {
       where: { id },
       data: { status },
     });
+
+    // Log status change
+    if (status === "CANCELLED") {
+      await logBookingAction(userId, "BOOKING_CANCELLED", id, {
+        previousStatus: appointment.status,
+        newStatus: status
+      });
+    } else if (status === "CONFIRMED") {
+      await logBookingAction(userId, "BOOKING_CONFIRMED", id, {
+        previousStatus: appointment.status,
+        newStatus: status
+      });
+    }
 
     return res.json({
       msg: "Tsagiiin status shinelegudslee",

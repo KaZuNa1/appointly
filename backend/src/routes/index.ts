@@ -5,6 +5,7 @@ import serviceRoutes from "./service.routes";
 import scheduleRoutes from "./schedule.routes";
 import slotsRoutes from "./slots.routes";
 import bookingRoutes from "./booking.routes";
+import auditRoutes from "./audit.routes";
 
 const router = Router();
 
@@ -43,5 +44,9 @@ router.use("/slots", slotsRoutes);
 /* BOOKINGS */
 router.use("/bookings", bookingRoutes);
 // This creates /api/bookings
+
+/* AUDIT LOGS */
+router.use("/audit-logs", auditRoutes);
+// This creates /api/audit-logs
 
 export default router;
