@@ -120,7 +120,7 @@ export default function ProviderDashboard() {
               )}
               <p className="text-sm font-medium text-gray-900 text-center">{providerData?.fullName}</p>
               <label className="mt-3 px-3 py-1 text-xs bg-indigo-50 text-indigo-600 rounded-lg cursor-pointer hover:bg-indigo-100 transition-colors">
-                📷 Зургаа сольих
+                📷 Зургаа солих
                 <input
                   type="file"
                   accept="image/*"
