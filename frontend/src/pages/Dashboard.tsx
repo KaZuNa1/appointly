@@ -109,11 +109,11 @@ export default function Dashboard() {
   }
 
   const upcomingBookings = bookings.filter(
-    (b) => new Date(b.appointmentTime) > new Date() && b.status === "CONFIRMED"
+    (b) => new Date(b.appointmentTime) > new Date() && (b.status === "PENDING" || b.status === "CONFIRMED")
   );
 
   const pastBookings = bookings.filter(
-    (b) => new Date(b.appointmentTime) <= new Date()
+    (b) => new Date(b.appointmentTime) <= new Date() && b.status !== "CANCELLED"
   );
 
   return (
