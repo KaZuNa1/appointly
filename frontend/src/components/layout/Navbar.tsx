@@ -12,12 +12,17 @@ export default function Navbar() {
   const [avatar, setAvatar] = useState<string | null>(null);
 
   useEffect(() => {
-    // Load avatar from localStorage
-    const savedAvatar = localStorage.getItem("userAvatar");
-    if (savedAvatar) {
-      setAvatar(savedAvatar);
+    // Load avatar from localStorage - user-specific to avoid conflicts
+    if (user?.id) {
+      const avatarKey = `userAvatar_${user.id}`;
+      const savedAvatar = localStorage.getItem(avatarKey);
+      if (savedAvatar) {
+        setAvatar(savedAvatar);
+      } else {
+        setAvatar(null); // Clear avatar if not found for this user
+      }
     }
-  }, []);
+  }, [user]);
 
   const handleLogout = () => {
     if (confirm("Гарахдаа итгэлтэй байна уу?")) {

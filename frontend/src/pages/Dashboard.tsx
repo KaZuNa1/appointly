@@ -61,10 +61,13 @@ export default function Dashboard() {
   useEffect(() => {
     if (user) {
       fetchBookings();
-      // Load avatar from localStorage
-      const savedAvatar = localStorage.getItem("userAvatar");
+      // Load avatar from localStorage - user-specific key
+      const avatarKey = `userAvatar_${user.id}`;
+      const savedAvatar = localStorage.getItem(avatarKey);
       if (savedAvatar) {
         setAvatar(savedAvatar);
+      } else {
+        setAvatar(null);
       }
     }
   }, [user]);
@@ -83,14 +86,15 @@ export default function Dashboard() {
 
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (file && user) {
       setUploadingAvatar(true);
       const reader = new FileReader();
       reader.onload = (event) => {
         const avatarData = event.target?.result as string;
         setAvatar(avatarData);
-        // Save to localStorage for persistence
-        localStorage.setItem("userAvatar", avatarData);
+        // Save to localStorage with user-specific key
+        const avatarKey = `userAvatar_${user.id}`;
+        localStorage.setItem(avatarKey, avatarData);
         setUploadingAvatar(false);
       };
       reader.readAsDataURL(file);
