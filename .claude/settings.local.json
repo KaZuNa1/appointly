@@ -12,7 +12,8 @@
       "Bash(timeout 120 npx prisma db push:*)",
       "Bash(node migrate.js:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []
