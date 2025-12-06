@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, User, LogOut, LayoutDashboard } from "lucide-react";
+import { Menu, X, User, LogOut, LayoutDashboard, Building2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { logout } from "@/lib/auth";
@@ -71,7 +71,11 @@ export default function Navbar() {
             <div className="relative">
               <button
                 onClick={() => setProfileOpen(!profileOpen)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition"
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition ${
+                  user.role === "PROVIDER"
+                    ? "bg-purple-100 hover:bg-purple-200"
+                    : "hover:bg-gray-100"
+                }`}
               >
                 {avatar ? (
                   <img
@@ -79,10 +83,14 @@ export default function Navbar() {
                     alt="Avatar"
                     className="w-8 h-8 rounded-full object-cover border-2 border-indigo-600"
                   />
+                ) : user.role === "PROVIDER" ? (
+                  <Building2 className="w-5 h-5 text-purple-700" />
                 ) : (
                   <User className="w-5 h-5" />
                 )}
-                <span className="font-medium">{user.fullName}</span>
+                <span className={`font-medium ${user.role === "PROVIDER" ? "text-purple-900" : ""}`}>
+                  {user.fullName}
+                </span>
               </button>
 
               {profileOpen && (
@@ -90,16 +98,6 @@ export default function Navbar() {
                   <div className="px-4 py-2 border-b border-gray-100">
                     <p className="text-sm font-semibold text-gray-900">{user.fullName}</p>
                     <p className="text-xs text-gray-500">{user.email}</p>
-                    {/* Role Badge */}
-                    {user.role === "PROVIDER" ? (
-                      <span className="inline-flex items-center gap-1 mt-2 px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-medium">
-                        💼 Бизнес
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 mt-2 px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">
-                        👤 Хэрэглэгч
-                      </span>
-                    )}
                   </div>
 
                   <Link
@@ -178,29 +176,25 @@ export default function Navbar() {
           ) : user ? (
             // Logged in - Show user info and logout
             <div className="pt-4 border-t border-gray-200 space-y-3">
-              <div className="px-4 py-2 bg-gray-50 rounded-lg flex items-center gap-3">
+              <div className={`px-4 py-2 rounded-lg flex items-center gap-3 ${
+                user.role === "PROVIDER" ? "bg-purple-100" : "bg-gray-50"
+              }`}>
                 {avatar ? (
                   <img
                     src={avatar}
                     alt="Avatar"
                     className="w-10 h-10 rounded-full object-cover border-2 border-indigo-600"
                   />
+                ) : user.role === "PROVIDER" ? (
+                  <Building2 className="w-10 h-10 text-purple-700" />
                 ) : (
                   <User className="w-10 h-10 text-gray-400" />
                 )}
                 <div className="flex-1">
-                  <p className="text-sm font-semibold text-gray-900">{user.fullName}</p>
+                  <p className={`text-sm font-semibold ${user.role === "PROVIDER" ? "text-purple-900" : "text-gray-900"}`}>
+                    {user.fullName}
+                  </p>
                   <p className="text-xs text-gray-500">{user.email}</p>
-                  {/* Role Badge */}
-                  {user.role === "PROVIDER" ? (
-                    <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-medium">
-                      💼 Бизнес
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">
-                      👤 Хэрэглэгч
-                    </span>
-                  )}
                 </div>
               </div>
 

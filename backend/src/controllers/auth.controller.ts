@@ -13,7 +13,7 @@ const generateToken = (user: any) => {
       role: user.role
     },
     process.env.JWT_SECRET as string,
-    { expiresIn: "24h" } // Auto logout after 24 hours
+    { expiresIn: "5d" } // Auto logout after 5 days
   );
 };
 
