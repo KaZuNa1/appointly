@@ -11,12 +11,11 @@ export async function uploadAvatar(userId: string, file: File): Promise<string |
   try {
     const fileExt = file.name.split('.').pop();
     const fileName = `${userId}-${Date.now()}.${fileExt}`;
-    const filePath = `avatars/${fileName}`;
 
     // Upload file to Supabase Storage
     const { data, error } = await supabase.storage
       .from('avatars')
-      .upload(filePath, file, {
+      .upload(fileName, file, {
         cacheControl: '3600',
         upsert: true
       });
@@ -29,7 +28,7 @@ export async function uploadAvatar(userId: string, file: File): Promise<string |
     // Get public URL
     const { data: urlData } = supabase.storage
       .from('avatars')
-      .getPublicUrl(filePath);
+      .getPublicUrl(fileName);
 
     return urlData.publicUrl;
   } catch (err) {
@@ -44,7 +43,7 @@ export async function deleteAvatar(avatarUrl: string): Promise<void> {
     // Extract file path from URL
     const path = avatarUrl.split('/storage/v1/object/public/avatars/')[1];
     if (path) {
-      await supabase.storage.from('avatars').remove([`avatars/${path}`]);
+      await supabase.storage.from('avatars').remove([path]);
     }
   } catch (err) {
     console.error('Failed to delete old avatar:', err);
