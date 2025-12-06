@@ -90,6 +90,16 @@ export default function Navbar() {
                   <div className="px-4 py-2 border-b border-gray-100">
                     <p className="text-sm font-semibold text-gray-900">{user.fullName}</p>
                     <p className="text-xs text-gray-500">{user.email}</p>
+                    {/* Role Badge */}
+                    {user.role === "PROVIDER" ? (
+                      <span className="inline-flex items-center gap-1 mt-2 px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-medium">
+                        💼 Бизнес
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 mt-2 px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+                        👤 Хэрэглэгч
+                      </span>
+                    )}
                   </div>
 
                   <Link
@@ -178,9 +188,19 @@ export default function Navbar() {
                 ) : (
                   <User className="w-10 h-10 text-gray-400" />
                 )}
-                <div>
+                <div className="flex-1">
                   <p className="text-sm font-semibold text-gray-900">{user.fullName}</p>
                   <p className="text-xs text-gray-500">{user.email}</p>
+                  {/* Role Badge */}
+                  {user.role === "PROVIDER" ? (
+                    <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-medium">
+                      💼 Бизнес
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+                      👤 Хэрэглэгч
+                    </span>
+                  )}
                 </div>
               </div>
 

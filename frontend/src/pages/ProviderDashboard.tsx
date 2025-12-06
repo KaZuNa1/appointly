@@ -16,7 +16,7 @@ type TabType = "info" | "schedule" | "services" | "settings";
 export default function ProviderDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<TabType>("info");
+  const [activeTab, setActiveTab] = useState<TabType>("schedule"); // Start with schedule (priority)
   const [providerData, setProviderData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [avatar, setAvatar] = useState<string | null>(null);
@@ -75,9 +75,9 @@ export default function ProviderDashboard() {
   };
 
   const tabs = [
-    { id: "info" as TabType, label: "Мэдээлэл", icon: "📋" },
-    { id: "schedule" as TabType, label: "Цагийн хуваарь", icon: "📅" },
+    { id: "schedule" as TabType, label: "Цагийн хуваарь", icon: "📅" }, // Priority #1
     { id: "services" as TabType, label: "Үйлчилгээ", icon: "✂️" },
+    { id: "info" as TabType, label: "Мэдээлэл", icon: "📋" },
     { id: "settings" as TabType, label: "Тохиргоо", icon: "⚙️" },
   ];
 
