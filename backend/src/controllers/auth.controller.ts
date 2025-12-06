@@ -262,3 +262,28 @@ export const updatePassword = async (req: any, res: Response) => {
     return res.status(500).json({ msg: "Сервер алдаа гарлаа." });
   }
 };
+
+// ----------------------
+// 8. UPDATE AVATAR
+// ----------------------
+export const updateAvatar = async (req: any, res: Response) => {
+  try {
+    const userId = req.user.id;
+    const { avatarUrl } = req.body;
+
+    if (!avatarUrl) {
+      return res.status(400).json({ msg: "Avatar URL оруулна уу." });
+    }
+
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { avatarUrl },
+      include: { providerProfile: true }
+    });
+
+    return res.status(200).json({ msg: "Зураг амжилттай солигдлоо!", user });
+  } catch (err) {
+    console.error("UPDATE AVATAR ERROR:", err);
+    return res.status(500).json({ msg: "Сервер алдаа гарлаа." });
+  }
+};

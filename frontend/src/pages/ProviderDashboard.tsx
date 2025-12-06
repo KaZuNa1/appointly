@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import api from "@/lib/api";
 import { logout } from "@/lib/auth";
+import { uploadAvatar } from "@/lib/supabase";
 import Navbar from "@/components/layout/Navbar";
 
 // Tab components
@@ -41,32 +42,40 @@ export default function ProviderDashboard() {
   };
 
   const loadAvatar = () => {
-    // Load avatar from localStorage - provider-specific key
-    if (user?.id) {
-      const avatarKey = `userAvatar_${user.id}`;
-      const savedAvatar = localStorage.getItem(avatarKey);
-      if (savedAvatar) {
-        setAvatar(savedAvatar);
-      } else {
-        setAvatar(null);
-      }
+    // Load avatar from user object (Supabase Storage URL)
+    if (user?.avatarUrl) {
+      setAvatar(user.avatarUrl);
+    } else {
+      setAvatar(null);
     }
   };
 
-  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && user) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const avatarData = event.target?.result as string;
-        setAvatar(avatarData);
-        // Save to localStorage with user-specific key
-        const avatarKey = `userAvatar_${user.id}`;
-        localStorage.setItem(avatarKey, avatarData);
-        // Notify other components about avatar change
-        window.dispatchEvent(new CustomEvent('avatarUpdated', { detail: { userId: user.id } }));
-      };
-      reader.readAsDataURL(file);
+      try {
+        // Upload to Supabase Storage
+        const avatarUrl = await uploadAvatar(user.id, file);
+
+        if (avatarUrl) {
+          // Save URL to database
+          const res = await api.put("/auth/avatar", { avatarUrl });
+
+          if (res.data.user) {
+            setAvatar(avatarUrl);
+            // Notify other components about avatar change
+            window.dispatchEvent(new CustomEvent('avatarUpdated', {
+              detail: { userId: user.id, avatarUrl }
+            }));
+            alert("Зураг амжилттай солигдлоо!");
+          }
+        } else {
+          alert("Зураг хуулахад алдаа гарлаа. Дахин оролдоно уу.");
+        }
+      } catch (err) {
+        console.error("Avatar upload failed:", err);
+        alert("Зураг хуулахад алдаа гарлаа.");
+      }
     }
   };
 

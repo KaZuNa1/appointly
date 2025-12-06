@@ -7,6 +7,7 @@ interface User {
   email: string;
   fullName: string;
   role: "CUSTOMER" | "PROVIDER" | "ADMIN";
+  avatarUrl?: string;
   providerProfile?: any;
 }
 

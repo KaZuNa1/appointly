@@ -39,6 +39,7 @@ model User {
   password    String
   fullName    String
   role        Role           @default(CUSTOMER)
+  avatarUrl   String?        // Supabase Storage URL for avatar
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 

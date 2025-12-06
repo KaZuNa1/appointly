@@ -29,4 +29,7 @@ router.put("/email", authMiddleware, authController.updateEmail);
 // Update password
 router.put("/password", authMiddleware, authController.updatePassword);
 
+// Update avatar
+router.put("/avatar", authMiddleware, authController.updateAvatar);
+
 export default router;

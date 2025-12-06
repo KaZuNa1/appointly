@@ -12,16 +12,12 @@ export default function Navbar() {
   const [avatar, setAvatar] = useState<string | null>(null);
 
   useEffect(() => {
-    // Load avatar from localStorage - user-specific to avoid conflicts
+    // Load avatar from user object (Supabase Storage URL)
     const loadAvatar = () => {
-      if (user?.id) {
-        const avatarKey = `userAvatar_${user.id}`;
-        const savedAvatar = localStorage.getItem(avatarKey);
-        if (savedAvatar) {
-          setAvatar(savedAvatar);
-        } else {
-          setAvatar(null); // Clear avatar if not found for this user
-        }
+      if (user?.avatarUrl) {
+        setAvatar(user.avatarUrl);
+      } else {
+        setAvatar(null);
       }
     };
 
@@ -29,8 +25,8 @@ export default function Navbar() {
 
     // Listen for avatar updates from other components
     const handleAvatarUpdate = (event: CustomEvent) => {
-      if (event.detail?.userId === user?.id) {
-        loadAvatar();
+      if (event.detail?.userId === user?.id && event.detail?.avatarUrl) {
+        setAvatar(event.detail.avatarUrl);
       }
     };
 
