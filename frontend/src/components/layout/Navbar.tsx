@@ -13,15 +13,32 @@ export default function Navbar() {
 
   useEffect(() => {
     // Load avatar from localStorage - user-specific to avoid conflicts
-    if (user?.id) {
-      const avatarKey = `userAvatar_${user.id}`;
-      const savedAvatar = localStorage.getItem(avatarKey);
-      if (savedAvatar) {
-        setAvatar(savedAvatar);
-      } else {
-        setAvatar(null); // Clear avatar if not found for this user
+    const loadAvatar = () => {
+      if (user?.id) {
+        const avatarKey = `userAvatar_${user.id}`;
+        const savedAvatar = localStorage.getItem(avatarKey);
+        if (savedAvatar) {
+          setAvatar(savedAvatar);
+        } else {
+          setAvatar(null); // Clear avatar if not found for this user
+        }
       }
-    }
+    };
+
+    loadAvatar();
+
+    // Listen for avatar updates from other components
+    const handleAvatarUpdate = (event: CustomEvent) => {
+      if (event.detail?.userId === user?.id) {
+        loadAvatar();
+      }
+    };
+
+    window.addEventListener('avatarUpdated', handleAvatarUpdate as EventListener);
+
+    return () => {
+      window.removeEventListener('avatarUpdated', handleAvatarUpdate as EventListener);
+    };
   }, [user]);
 
   const handleLogout = () => {

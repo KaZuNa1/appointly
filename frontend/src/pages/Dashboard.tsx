@@ -96,6 +96,8 @@ export default function Dashboard() {
         const avatarKey = `userAvatar_${user.id}`;
         localStorage.setItem(avatarKey, avatarData);
         setUploadingAvatar(false);
+        // Notify other components about avatar change
+        window.dispatchEvent(new CustomEvent('avatarUpdated', { detail: { userId: user.id } }));
       };
       reader.readAsDataURL(file);
     }
