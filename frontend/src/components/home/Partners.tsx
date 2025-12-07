@@ -6,28 +6,60 @@ export default function Partners() {
     "Авто Сервис",
     "Фитнесс",
     "Сургалтын Төв",
+    "Массаж",
+    "Үс засалт",
+    "Маникюр",
+    "Зүрх судасны эмнэлэг",
+    "Шүдний эмч",
+    "Сэтгэл зүйч",
   ];
 
-  return (
-    <section className="bg-white py-14">
-      <div className="max-w-6xl mx-auto px-6">
+  // Duplicate the array for infinite scroll effect
+  const duplicatedCompanies = [...companies, ...companies];
 
-        <p className="text-center text-sm font-semibold text-gray-500 mb-10">
-          ЭДГЭЭР САЛБАРУУД АPPOINTLY-Г АШИГЛАДАГ
+  return (
+    <section className="bg-white py-16 overflow-hidden border-t border-b border-gray-200">
+      <div className="max-w-7xl mx-auto px-6">
+
+        <p className="text-center text-sm font-bold text-gray-600 tracking-wider mb-12">
+          ЭДГЭЭР САЛБАРУУД APPOINTLY-Г АШИГЛАДАГ
         </p>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">
-          {companies.map((company, i) => (
-            <div
-              key={i}
-              className="h-16 bg-gray-100 rounded-lg flex items-center justify-center text-gray-500 text-sm font-medium"
-            >
-              {company}
-            </div>
-          ))}
+        {/* Infinite Scroll Container */}
+        <div className="relative">
+          {/* Scrolling content */}
+          <div className="flex gap-6 animate-scroll">
+            {duplicatedCompanies.map((company, i) => (
+              <div
+                key={i}
+                className="flex-shrink-0 h-20 px-8 bg-white border border-gray-200 rounded-xl flex items-center justify-center text-gray-700 text-base font-semibold shadow-sm hover:shadow-md hover:border-indigo-300 transition-all duration-300"
+              >
+                {company}
+              </div>
+            ))}
+          </div>
         </div>
 
       </div>
+
+      <style>{`
+        @keyframes scroll {
+          0% {
+            transform: translateX(0);
+          }
+          100% {
+            transform: translateX(-50%);
+          }
+        }
+
+        .animate-scroll {
+          animation: scroll 30s linear infinite;
+        }
+
+        .animate-scroll:hover {
+          animation-play-state: paused;
+        }
+      `}</style>
     </section>
   );
 }

@@ -15,6 +15,17 @@ import Register from "@/pages/Register";
 // AUTH: BUSINESS
 import BusinessRegister from "@/pages/BusinessRegister";
 
+// EMAIL VERIFICATION
+import VerifyEmailPending from "@/pages/VerifyEmailPending";
+import VerifyEmail from "@/pages/VerifyEmail";
+
+// PASSWORD RESET
+import ForgotPassword from "@/pages/ForgotPassword";
+import ResetPassword from "@/pages/ResetPassword";
+
+// OAUTH
+import AuthCallback from "@/pages/AuthCallback";
+
 // USER DASHBOARD
 import Dashboard from "@/pages/Dashboard";
 
@@ -48,6 +59,23 @@ export function AppRoutes() {
           BUSINESS AUTH
       ======================== */}
       <Route path="/business/register" element={<BusinessRegister />} />
+
+      {/* =======================
+          EMAIL VERIFICATION
+      ======================== */}
+      <Route path="/verify-email-pending" element={<VerifyEmailPending />} />
+      <Route path="/verify-email" element={<VerifyEmail />} />
+
+      {/* =======================
+          PASSWORD RESET
+      ======================== */}
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+
+      {/* =======================
+          OAUTH CALLBACK
+      ======================== */}
+      <Route path="/auth/callback" element={<AuthCallback />} />
 
       {/* =======================
           USER DASHBOARD (CUSTOMERS ONLY)

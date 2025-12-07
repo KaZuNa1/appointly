@@ -14,13 +14,14 @@ export default function BusinessRegister() {
     fullName: "",
     email: "",
     password: "",
+    confirmPassword: "",
     businessName: "",
+    nickname: "",
     category: "",
     phone: "",
     address: "",
     city: "",
     district: "",
-    description: "",
   });
 
   const handleChange = (field: string, value: string) => {
@@ -29,14 +30,42 @@ export default function BusinessRegister() {
 
   const handleSubmit = async () => {
     try {
-      // validate
-      if (!form.fullName || !form.email || !form.password || !form.businessName || !form.category) {
+      // validate required fields
+      if (!form.fullName || !form.email || !form.password || !form.confirmPassword || !form.businessName || !form.category) {
         alert("Бүх шаардлагатай талбарыг бөглөнө үү.");
+        return;
+      }
+
+      // Check password match
+      if (form.password !== form.confirmPassword) {
+        alert("Нууц үг хоорондоо таарахгүй байна.");
+        return;
+      }
+
+      // Password validation: minimum 8 characters, must contain number and letter
+      if (form.password.length < 8) {
+        alert("Нууц үг дор хаяж 8 тэмдэгттэй байх ёстой.");
+        return;
+      }
+
+      const hasNumber = /\d/.test(form.password);
+      const hasLetter = /[a-zA-Z]/.test(form.password);
+
+      if (!hasNumber || !hasLetter) {
+        alert("Нууц үг үсэг болон тоо агуулсан байх ёстой.");
         return;
       }
 
       const res = await api.post("/auth/business/register", form);
 
+      // Check if email verification is required
+      if (res.data.requiresVerification) {
+        alert(res.data.msg || "Бизнес амжилттай бүртгэгдлээ! Имэйл хаягаа баталгаажуулна уу.");
+        navigate("/verify-email-pending", { state: { email: res.data.email } });
+        return;
+      }
+
+      // OLD FLOW (if verification is disabled in future)
       if (res.data.token) {
         saveToken(res.data.token); // save JWT to localStorage
       }

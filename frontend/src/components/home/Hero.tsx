@@ -42,13 +42,11 @@ export default function Hero() {
 
         {/* RIGHT IMAGE */}
         <div className="flex justify-center">
-          <div className="w-full h-80 bg-indigo-100 rounded-2xl flex items-center justify-center">
-            <img
-              src="https://via.placeholder.com/300x200"
-              alt="Appointly illustration"
-              className="rounded-xl shadow-md"
-            />
-          </div>
+          <img
+            src="/istockphoto-1392979115-612x612.jpg"
+            alt="Appointly - Үйлчилгээний цаг захиалга"
+            className="w-full h-auto rounded-2xl shadow-2xl object-cover"
+          />
         </div>
 
       </div>

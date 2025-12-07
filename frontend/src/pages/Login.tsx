@@ -5,6 +5,7 @@ import AuthCard from "@/components/auth/AuthCard";
 import InputField from "@/components/auth/InputField";
 import PasswordField from "@/components/auth/PasswordField";
 import { Button } from "@/components/ui/button";
+import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
 import { useAuth } from "@/contexts/AuthContext";
 
 import api from "@/lib/api";
@@ -52,9 +53,18 @@ export default function Login() {
     } catch (err: any) {
       console.error("LOGIN ERROR:", err);
 
+      const errorData = err?.response?.data;
+
+      // Check if user needs email verification
+      if (errorData?.requiresVerification) {
+        alert(errorData.msg || "Имэйл хаяг баталгаажаагүй байна.");
+        navigate("/verify-email-pending", { state: { email: errorData.email } });
+        return;
+      }
+
       const msg =
-        err?.response?.data?.msg ||
-        err?.response?.data?.message ||
+        errorData?.msg ||
+        errorData?.message ||
         "Сервер алдаа гарлаа.";
 
       alert(msg);
@@ -86,6 +96,12 @@ export default function Login() {
         onChange={setPass}
       />
 
+      <div className="text-right mt-2">
+        <Link to="/forgot-password" className="text-sm text-indigo-600 hover:text-indigo-700 hover:underline">
+          Нууц үгээ мартсан уу?
+        </Link>
+      </div>
+
       <Button
         className="w-full mt-4 h-12 text-base"
         onClick={handleLogin}
@@ -93,6 +109,16 @@ export default function Login() {
       >
         {loading ? "Түр хүлээнэ үү..." : "Нэвтрэх"}
       </Button>
+
+      {/* Divider */}
+      <div className="flex items-center gap-4 my-6">
+        <div className="flex-1 border-t border-gray-300"></div>
+        <span className="text-sm text-gray-500">эсвэл</span>
+        <div className="flex-1 border-t border-gray-300"></div>
+      </div>
+
+      {/* Google Login */}
+      <GoogleLoginButton />
 
       <p className="text-center text-gray-600 mt-6">
         Шинэ хэрэглэгч үү?{" "}

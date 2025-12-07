@@ -16,7 +16,11 @@
       "Bash(git push:*)",
       "Bash(node migrate-audit.js:*)",
       "Bash(node migrate-avatar.js:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(node migrate-nickname.js:*)",
+      "Bash(node migrate-email-verification.js:*)",
+      "Bash(node migrate-password-reset.js:*)",
+      "Bash(node migrate-google-oauth.js:*)"
     ],
     "deny": [],
     "ask": []

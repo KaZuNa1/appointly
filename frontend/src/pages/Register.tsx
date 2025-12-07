@@ -5,6 +5,7 @@ import AuthCard from "@/components/auth/AuthCard";
 import InputField from "@/components/auth/InputField";
 import PasswordField from "@/components/auth/PasswordField";
 import { Button } from "@/components/ui/button";
+import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
 import { useAuth } from "@/contexts/AuthContext";
 import api from "@/lib/api";
 import { saveToken } from "@/lib/auth";
@@ -30,6 +31,20 @@ export default function Register() {
       return;
     }
 
+    // Password validation: minimum 8 characters, must contain number and letter
+    if (pass.length < 8) {
+      alert("Нууц үг дор хаяж 8 тэмдэгттэй байх ёстой.");
+      return;
+    }
+
+    const hasNumber = /\d/.test(pass);
+    const hasLetter = /[a-zA-Z]/.test(pass);
+
+    if (!hasNumber || !hasLetter) {
+      alert("Нууц үг үсэг болон тоо агуулсан байх ёстой.");
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -39,6 +54,14 @@ export default function Register() {
         password: pass,
       });
 
+      // Check if email verification is required
+      if (res.data.requiresVerification) {
+        alert(res.data.msg || "Бүртгэл амжилттай! Имэйл хаягаа баталгаажуулна уу.");
+        navigate("/verify-email-pending", { state: { email: res.data.email } });
+        return;
+      }
+
+      // OLD FLOW (if verification is disabled in future)
       // Save JWT
       saveToken(res.data.token);
 
@@ -107,6 +130,16 @@ export default function Register() {
       >
         {loading ? "Түр хүлээнэ үү..." : "Бүртгүүлэх"}
       </Button>
+
+      {/* Divider */}
+      <div className="flex items-center gap-4 my-6">
+        <div className="flex-1 border-t border-gray-300"></div>
+        <span className="text-sm text-gray-500">эсвэл</span>
+        <div className="flex-1 border-t border-gray-300"></div>
+      </div>
+
+      {/* Google Login */}
+      <GoogleLoginButton />
 
       <p className="text-center text-gray-600 mt-6">
         Аль хэдийн бүртгэлтэй юу?{" "}

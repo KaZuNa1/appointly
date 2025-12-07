@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
+import passport from "./config/passport";
 import routes from "./routes/index";
 
 const app = express();
@@ -20,6 +21,9 @@ app.use(
 
 app.use(helmet());
 app.use(morgan("dev"));
+
+// Initialize Passport
+app.use(passport.initialize());
 
 // Health check
 app.get("/health", (req, res) => {

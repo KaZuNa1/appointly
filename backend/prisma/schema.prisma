@@ -28,6 +28,11 @@ enum AppointmentStatus {
   COMPLETED
 }
 
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+}
+
 // =========================
 //  MODELS
 // =========================
@@ -36,10 +41,26 @@ enum AppointmentStatus {
 model User {
   id          String         @id @default(uuid())
   email       String         @unique
-  password    String
+  password    String?        // Optional for OAuth users
   fullName    String
   role        Role           @default(CUSTOMER)
   avatarUrl   String?        // Supabase Storage URL for avatar
+
+  // OAuth
+  provider    AuthProvider   @default(LOCAL)
+  googleId    String?        @unique
+
+  // Email Verification
+  emailVerified             Boolean   @default(false)
+  verificationToken         String?   // One-time use token
+  tokenExpiry               DateTime? // Token expires after 30 minutes
+  lastVerificationEmailSent DateTime? // For rate limiting resends
+
+  // Password Reset
+  resetPasswordToken        String?   // One-time use reset token
+  resetPasswordExpiry       DateTime? // Reset token expires after 30 minutes
+  lastResetEmailSent        DateTime? // For rate limiting reset emails
+
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
@@ -53,6 +74,7 @@ model BusinessProvider {
   id            String           @id @default(uuid())
   userId        String           @unique
   businessName  String
+  nickname      String?          // Display name for customers
   category      String
   phone         String?
   description   String?
