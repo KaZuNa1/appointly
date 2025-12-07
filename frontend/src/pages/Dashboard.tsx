@@ -138,7 +138,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gray-100">
       <Navbar />
 
-      <div className="flex h-screen">
+      <div className="flex min-h-screen">
         {/* LEFT SIDEBAR */}
         <div className="w-64 bg-white border-r border-gray-200 shadow-sm overflow-y-auto">
           <div className="p-6 border-b border-gray-200">
