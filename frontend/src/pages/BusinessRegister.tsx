@@ -6,19 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import api from "@/lib/api";
 import { saveToken } from "@/lib/auth";
 
-interface ValidationErrors extends Record<string, string | undefined> {
-  fullName?: string;
-  email?: string;
-  password?: string;
-  confirmPassword?: string;
-  businessName?: string;
-  nickname?: string;
-  category?: string;
-  phone?: string;
-  address?: string;
-  city?: string;
-  district?: string;
-}
+type ValidationErrors = Record<string, string>;
 
 export default function BusinessRegister() {
   const navigate = useNavigate();
@@ -48,8 +36,10 @@ export default function BusinessRegister() {
     setServerError(""); // Clear server error when user types
 
     // Clear field-specific error when user starts typing
-    if (errors[field as keyof ValidationErrors]) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }));
+    if (errors[field]) {
+      const newErrors = { ...errors };
+      delete newErrors[field];
+      setErrors(newErrors);
     }
   };
 
