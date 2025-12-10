@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import api from "@/lib/api";
 import { saveToken } from "@/lib/auth";
 
-interface ValidationErrors {
+interface ValidationErrors extends Record<string, string | undefined> {
   fullName?: string;
   email?: string;
   password?: string;

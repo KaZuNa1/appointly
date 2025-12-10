@@ -40,7 +40,7 @@ const Services: React.FC = () => {
 
   // Get subcategories for the current category
   const subcategories = currentCategory
-    ? Array.from(new Set(currentCategory.services.map(s => s.category).filter(Boolean)))
+    ? Array.from(new Set(currentCategory.services.map(s => s.category).filter((c): c is string => Boolean(c))))
     : [];
 
   // Filter services by subcategory

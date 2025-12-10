@@ -143,8 +143,12 @@ export default function ResetPassword() {
               onChange={setConfirmPassword}
             />
 
-            {message && status === "error" && (
-              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+            {message && (status === "error" || status === "success") && (
+              <div className={`mt-4 p-3 border rounded-lg text-sm ${
+                status === "error"
+                  ? "bg-red-50 border-red-200 text-red-700"
+                  : "bg-green-50 border-green-200 text-green-700"
+              }`}>
                 {message}
               </div>
             )}
