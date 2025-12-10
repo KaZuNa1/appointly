@@ -2,11 +2,14 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { saveToken } from "@/lib/auth";
+import { useAuth } from "@/contexts/AuthContext";
 import axios from "axios";
 
 export default function VerifyEmail() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { refreshUser } = useAuth();
   const token = searchParams.get("token");
 
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
@@ -28,22 +31,24 @@ export default function VerifyEmail() {
         setStatus("success");
         setMessage(res.data.msg || "Имэйл амжилттай баталгаажлаа!");
 
-        // Save token and user to localStorage
+        // Save token using the proper helper
         if (res.data.token) {
-          localStorage.setItem("token", res.data.token);
-        }
-        if (res.data.user) {
-          localStorage.setItem("user", JSON.stringify(res.data.user));
+          saveToken(res.data.token);
         }
 
-        // Redirect to dashboard after 3 seconds
+        // Refresh user in AuthContext
+        await refreshUser();
+
+        // Redirect to dashboard after 2 seconds
         setTimeout(() => {
           if (res.data.user?.role === "PROVIDER") {
             navigate("/provider/dashboard");
+          } else if (res.data.user?.role === "ADMIN") {
+            navigate("/admin");
           } else {
-            navigate("/customer/dashboard");
+            navigate("/dashboard");
           }
-        }, 3000);
+        }, 2000);
 
       } catch (error: any) {
         setStatus("error");
@@ -56,7 +61,7 @@ export default function VerifyEmail() {
   }, [token, navigate]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white flex items-center justify-center px-6">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
       <div className="max-w-md w-full">
 
         <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
@@ -114,7 +119,7 @@ export default function VerifyEmail() {
                   Шалтгаан:
                 </h3>
                 <ul className="text-sm text-amber-800 space-y-1 ml-4 list-disc">
-                  <li>Холбоос хугацаа дууссан (30 минут)</li>
+                  <li>Холбоос хугацаа дууссан (5 минут)</li>
                   <li>Холбоос аль хэдийн ашигласан</li>
                   <li>Холбоос буруу эсвэл устгагдсан</li>
                 </ul>

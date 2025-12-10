@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
-import { ChevronLeft, ChevronRight, X, Clock, User, Mail } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Clock, User, Mail, Edit2, Trash2, Trash, Settings } from "lucide-react";
 
 interface Schedule {
   id: string;
@@ -40,14 +40,43 @@ export default function ScheduleTab() {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancellationReason, setCancellationReason] = useState("");
+  const [showOptionsDropdown, setShowOptionsDropdown] = useState(false);
+  const [showViewSettings, setShowViewSettings] = useState(false);
+  const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
   const [creating, setCreating] = useState(false);
-  const [viewStartTime, setViewStartTime] = useState("06:00");
-  const [viewEndTime, setViewEndTime] = useState("22:00");
+  const [editing, setEditing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+
+  // Bulk delete form
+  const [bulkDeleteMode, setBulkDeleteMode] = useState<"all" | "range">("all");
+  const [bulkDeleteStartDate, setBulkDeleteStartDate] = useState(formatDateForApi(new Date()));
+  const [bulkDeleteEndDate, setBulkDeleteEndDate] = useState(formatDateForApi(new Date()));
+
+  // Load table view settings from localStorage or use defaults
+  const [viewStartTime, setViewStartTime] = useState(() => {
+    const saved = localStorage.getItem("scheduleViewStartTime");
+    return saved || "06:00";
+  });
+  const [viewEndTime, setViewEndTime] = useState(() => {
+    const saved = localStorage.getItem("scheduleViewEndTime");
+    return saved || "22:00";
+  });
+
   const [formData, setFormData] = useState({
     date: formatDateForApi(new Date()),
     openTime: "09:00",
     closeTime: "18:00",
   });
+
+  // Weekday selection state
+  const [selectedWeekdays, setSelectedWeekdays] = useState<number[]>([1, 2, 3, 4, 5]); // Mon-Fri by default
+  const [weeksCount, setWeeksCount] = useState(4); // Default to 4 weeks
 
   // Generate time slots based on view configuration
   const timeSlots = generateTimeSlots(viewStartTime, viewEndTime);
@@ -55,9 +84,33 @@ export default function ScheduleTab() {
   // Days of week
   const weekDays = generateWeekDays(currentWeekStart);
 
+  // Save view settings to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem("scheduleViewStartTime", viewStartTime);
+    localStorage.setItem("scheduleViewEndTime", viewEndTime);
+  }, [viewStartTime, viewEndTime]);
+
   useEffect(() => {
     fetchData();
   }, [currentWeekStart]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (showOptionsDropdown && !target.closest('.relative')) {
+        setShowOptionsDropdown(false);
+      }
+    };
+
+    if (showOptionsDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showOptionsDropdown]);
 
   const fetchData = async () => {
     try {
@@ -78,23 +131,215 @@ export default function ScheduleTab() {
   const handleCreateSchedule = async () => {
     try {
       setCreating(true);
-      await api.post("/schedules", {
-        date: new Date(formData.date),
+
+      // If no weekdays selected or only single day mode, create single schedule
+      if (selectedWeekdays.length === 0) {
+        alert("Гараг сонгоно уу");
+        return;
+      }
+
+      // Calculate target dates based on selected weekdays
+      const targetDates: string[] = [];
+      const baseDate = new Date(formData.date);
+
+      // Get the start of the week for the selected date
+      const weekStart = getMonday(baseDate);
+
+      // Generate dates based on user-specified weeks count
+      const weeksToGenerate = weeksCount;
+
+      for (let week = 0; week < weeksToGenerate; week++) {
+        for (const dayIndex of selectedWeekdays) {
+          const targetDate = new Date(weekStart);
+          targetDate.setDate(targetDate.getDate() + (week * 7) + dayIndex - 1); // dayIndex is 1-based (Mon=1, Sun=7)
+          targetDates.push(formatDateForApi(targetDate));
+        }
+      }
+
+      // Use the copy endpoint to create multiple schedules
+      await api.post("/schedules/copy", {
+        targetDates,
         openTime: formData.openTime,
         closeTime: formData.closeTime,
       });
+
       setShowCreateModal(false);
       setFormData({
         date: formatDateForApi(new Date()),
         openTime: "09:00",
         closeTime: "18:00",
       });
+      setSelectedWeekdays([1, 2, 3, 4, 5]); // Reset to Mon-Fri
+      setWeeksCount(4); // Reset to default 4 weeks
       await fetchData();
+
+      alert(`Амжилттай үүслээ! ${targetDates.length} өдрийн цагийн хуваарь үүсгэлээ.`);
     } catch (err: any) {
       console.error("Failed to create schedule:", err);
       alert(err.response?.data?.msg || "Цагийн хуваарь үүсгэхэд алдаа гарлаа");
     } finally {
       setCreating(false);
+    }
+  };
+
+  const toggleWeekday = (dayIndex: number) => {
+    setSelectedWeekdays(prev =>
+      prev.includes(dayIndex)
+        ? prev.filter(d => d !== dayIndex)
+        : [...prev, dayIndex].sort()
+    );
+  };
+
+  const isScheduleLocked = (schedule: Schedule): boolean => {
+    const scheduleDate = new Date(schedule.date);
+    scheduleDate.setHours(0, 0, 0, 0);
+
+    const now = new Date();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Past dates are locked
+    if (scheduleDate < today) {
+      return true;
+    }
+
+    // Today's schedule is locked if current time has entered working hours
+    if (scheduleDate.getTime() === today.getTime()) {
+      const [openHour, openMin] = schedule.openTime.split(":").map(Number);
+      const openDateTime = new Date(scheduleDate);
+      openDateTime.setHours(openHour, openMin, 0, 0);
+
+      if (now >= openDateTime) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
+  const handleEditSchedule = (schedule: Schedule) => {
+    if (isScheduleLocked(schedule)) {
+      alert("Энэ цагийн хуваарийг засах боломжгүй байна");
+      return;
+    }
+
+    setSelectedSchedule(schedule);
+    setFormData({
+      date: formatDateForApi(new Date(schedule.date)),
+      openTime: schedule.openTime,
+      closeTime: schedule.closeTime,
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUpdateSchedule = async () => {
+    if (!selectedSchedule) return;
+
+    try {
+      setEditing(true);
+      await api.put(`/schedules/${selectedSchedule.id}`, {
+        openTime: formData.openTime,
+        closeTime: formData.closeTime,
+      });
+
+      setShowEditModal(false);
+      setSelectedSchedule(null);
+      setFormData({
+        date: formatDateForApi(new Date()),
+        openTime: "09:00",
+        closeTime: "18:00",
+      });
+      await fetchData();
+      alert("Цагийн хуваарь амжилттай шинэчлэгдлээ");
+    } catch (err: any) {
+      console.error("Failed to update schedule:", err);
+      alert(err.response?.data?.msg || "Цагийн хуваарь шинэчлэхэд алдаа гарлаа");
+    } finally {
+      setEditing(false);
+    }
+  };
+
+  const handleDeleteSchedule = async (schedule: Schedule) => {
+    if (isScheduleLocked(schedule)) {
+      alert("Энэ цагийн хуваарийг устгах боломжгүй байна");
+      return;
+    }
+
+    const scheduleDate = new Date(schedule.date);
+    const dateStr = scheduleDate.toLocaleDateString("mn-MN", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+    if (!confirm(`${dateStr}-ны цагийн хуваарийг устгах уу?`)) {
+      return;
+    }
+
+    try {
+      setDeleting(true);
+      await api.delete(`/schedules/${schedule.id}`);
+      await fetchData();
+      alert("Цагийн хуваарь амжилттай устлаа");
+    } catch (err: any) {
+      console.error("Failed to delete schedule:", err);
+      alert(err.response?.data?.msg || "Цагийн хуваарь устгахад алдаа гарлаа");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    try {
+      setBulkDeleting(true);
+
+      const payload: any = {
+        startDate: bulkDeleteMode === "all" ? formatDateForApi(new Date()) : bulkDeleteStartDate,
+      };
+
+      if (bulkDeleteMode === "range") {
+        payload.endDate = bulkDeleteEndDate;
+      }
+
+      const response = await api.post("/schedules/bulk-delete", payload);
+
+      setShowBulkDeleteModal(false);
+      await fetchData();
+
+      const { deletedCount } = response.data;
+      alert(`${deletedCount} цагийн хуваарь амжилттай устлаа`);
+    } catch (err: any) {
+      console.error("Failed to bulk delete:", err);
+      alert(err.response?.data?.msg || "Цагийн хуваарь устгахад алдаа гарлаа");
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
+  const handleCancelBooking = async () => {
+    if (!selectedBooking) return;
+
+    if (!cancellationReason || cancellationReason.trim() === "") {
+      alert("Цуцлах шалтгаанаа оруулна уу");
+      return;
+    }
+
+    try {
+      setCancelling(true);
+      await api.post(`/bookings/${selectedBooking.id}/provider-cancel`, {
+        reason: cancellationReason,
+      });
+
+      alert("Захиалга амжилттай цуцлагдлаа");
+      setShowCancelModal(false);
+      setShowModal(false);
+      setCancellationReason("");
+      await fetchData();
+    } catch (err: any) {
+      console.error("Failed to cancel booking:", err);
+      alert(err.response?.data?.msg || "Алдаа гарлаа");
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -188,9 +433,7 @@ export default function ScheduleTab() {
   const getSlotColor = (slotInfo: TimeSlotInfo) => {
     switch (slotInfo.type) {
       case "booked":
-        return slotInfo.booking?.status === "CONFIRMED"
-          ? "bg-green-200 hover:bg-green-300 border-green-400 cursor-pointer"
-          : "bg-yellow-200 hover:bg-yellow-300 border-yellow-400 cursor-pointer";
+        return "bg-green-200 hover:bg-green-300 border-green-400 cursor-pointer";
       case "available":
         return "bg-blue-100 hover:bg-blue-200 border-blue-300";
       case "empty":
@@ -207,72 +450,150 @@ export default function ScheduleTab() {
   }
 
   return (
-    <div>
+    <div className="pb-16">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold text-gray-900">7 хоног цагийн хуваарь</h1>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
-          >
-            + Ажлын цаг үүсгэх
-          </button>
+
+        {/* Week Navigation */}
+        <div className="flex gap-2 items-center">
           <button
             onClick={handlePrevWeek}
             className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            <ChevronLeft size={24} />
+            <ChevronLeft size={20} />
           </button>
-          <span className="px-4 py-2 text-gray-700 font-medium bg-gray-100 rounded-lg min-w-max">
+          <span className="px-4 py-2 text-gray-700 font-medium bg-gray-100 rounded-lg min-w-max text-sm">
             {formatWeekRange(currentWeekStart)}
           </span>
           <button
             onClick={handleNextWeek}
             className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            <ChevronRight size={24} />
+            <ChevronRight size={20} />
           </button>
         </div>
       </div>
 
-      {/* View Time Range Settings */}
-      <div className="mb-6 bg-white p-4 rounded-lg border border-gray-200">
-        <div className="flex items-end gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Эхлэх цаг
-            </label>
-            <input
-              type="time"
-              value={viewStartTime}
-              onChange={(e) => setViewStartTime(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Дуусах цаг
-            </label>
-            <input
-              type="time"
-              value={viewEndTime}
-              onChange={(e) => setViewEndTime(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
+      {/* View Settings Modal */}
+      {showViewSettings && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-gray-900">Хүснэгт тохируулах</h2>
+              <button
+                onClick={() => setShowViewSettings(false)}
+                className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Эхлэх цаг
+                </label>
+                <select
+                  value={viewStartTime}
+                  onChange={(e) => setViewStartTime(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  {generateTimeOptions().map((time) => (
+                    <option key={time} value={time}>
+                      {time}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Дуусах цаг
+                </label>
+                <select
+                  value={viewEndTime}
+                  onChange={(e) => setViewEndTime(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  {generateTimeOptions().map((time) => (
+                    <option key={time} value={time}>
+                      {time}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="mt-6 flex gap-2">
+              <button
+                onClick={() => setShowViewSettings(false)}
+                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+              >
+                Хадгалах
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Legend */}
-      <div className="grid grid-cols-2 gap-4 mb-6 bg-white p-4 rounded-lg border border-gray-200">
+      <div className="flex items-center gap-6 mb-4">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-blue-100 border-2 border-blue-300 rounded"></div>
+          <div className="w-5 h-5 bg-blue-100 border-2 border-blue-400 rounded"></div>
           <span className="text-sm text-gray-700">Ажлын цаг</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-green-200 border-2 border-green-400 rounded"></div>
+          <div className="w-5 h-5 bg-green-200 border-2 border-green-400 rounded"></div>
           <span className="text-sm text-gray-700">Баталгаажсан</span>
+        </div>
+      </div>
+
+      {/* Action Bar */}
+      <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium flex items-center gap-1"
+        >
+          <span className="text-lg leading-none">+</span>
+          <span>Ажлын цаг үүсгэх</span>
+        </button>
+
+        {/* Settings Dropdown */}
+        <div className="relative">
+          <button
+            onClick={() => setShowOptionsDropdown(!showOptionsDropdown)}
+            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Тохиргоо"
+          >
+            <Settings size={20} />
+          </button>
+
+          {showOptionsDropdown && (
+            <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+              <button
+                onClick={() => {
+                  setShowViewSettings(true);
+                  setShowOptionsDropdown(false);
+                }}
+                className="w-full flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 transition"
+              >
+                <Clock className="w-4 h-4" />
+                <span>Хүснэгт тохируулах</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowBulkDeleteModal(true);
+                  setShowOptionsDropdown(false);
+                }}
+                className="w-full flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 transition"
+              >
+                <Trash className="w-4 h-4" />
+                <span>Олноор устгах</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -364,17 +685,52 @@ export default function ScheduleTab() {
 
                   const topPx = (openMinutes - viewStartMinutes) * pixelsPerMinute;
                   const heightPx = (closeMinutes - openMinutes) * pixelsPerMinute;
+                  const isLocked = isScheduleLocked(schedule);
 
                   return (
                     <div
                       key={`working-${schedule.id}`}
-                      className="absolute left-0 right-0 bg-blue-100 opacity-50 border-t-2 border-b-2 border-blue-400"
+                      className={`absolute left-0 right-0 bg-blue-100 border-t-2 border-b-2 border-blue-400 group hover:bg-blue-150 transition-colors ${
+                        isLocked ? "opacity-40" : "opacity-70"
+                      }`}
                       style={{
                         top: `${topPx}px`,
                         height: `${heightPx}px`,
                         zIndex: 1,
                       }}
-                    />
+                    >
+                      {/* Edit/Delete Buttons - Show on hover if not locked and sufficient height */}
+                      {!isLocked && heightPx > 60 && (
+                        <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 z-10">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditSchedule(schedule);
+                            }}
+                            className="p-1 bg-white rounded shadow hover:bg-gray-100 transition"
+                            title="Засах"
+                          >
+                            <Edit2 className="w-3 h-3 text-blue-600" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteSchedule(schedule);
+                            }}
+                            className="p-1 bg-white rounded shadow hover:bg-red-50 transition"
+                            title="Устгах"
+                          >
+                            <Trash2 className="w-3 h-3 text-red-600" />
+                          </button>
+                        </div>
+                      )}
+                      {/* Lock indicator for locked schedules */}
+                      {isLocked && heightPx > 40 && (
+                        <div className="absolute top-1 right-1 text-xs text-gray-500 bg-white px-1.5 py-0.5 rounded shadow">
+                          🔒
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
 
@@ -389,8 +745,7 @@ export default function ScheduleTab() {
                   const topPx = (bookingStartMinutes - viewStartMinutes) * pixelsPerMinute;
                   const heightPx = booking.service.duration * pixelsPerMinute;
 
-                  const bgColor =
-                    booking.status === "CONFIRMED" ? "bg-green-500" : "bg-yellow-500";
+                  const bgColor = "bg-green-500";
 
                   return (
                     <div
@@ -493,18 +848,6 @@ export default function ScheduleTab() {
                   </div>
                 </div>
               </div>
-
-              {/* Status */}
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600 font-medium">Статус</p>
-                <p className={`text-sm font-semibold mt-1 ${
-                  selectedBooking.status === "CONFIRMED"
-                    ? "text-green-600"
-                    : "text-yellow-600"
-                }`}>
-                  {selectedBooking.status === "CONFIRMED" ? "✓ Баталгаажсан" : "⏱ Хүлээгдэж байна"}
-                </p>
-              </div>
             </div>
 
             <div className="mt-6 flex gap-2">
@@ -513,6 +856,77 @@ export default function ScheduleTab() {
                 className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
               >
                 Хаах
+              </button>
+              {selectedBooking.status !== "CANCELLED" && (
+                <button
+                  onClick={() => {
+                    setShowCancelModal(true);
+                  }}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                >
+                  Цуцлах
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Booking Modal */}
+      {showCancelModal && selectedBooking && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-gray-900">Захиалга цуцлах</h2>
+              <button
+                onClick={() => {
+                  setShowCancelModal(false);
+                  setCancellationReason("");
+                }}
+                className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm text-yellow-800">
+                  <strong>{selectedBooking.customer.fullName}</strong> руу цуцлах шалтгаан мэдэгдэл явна.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Цуцлах шалтгаан *
+                </label>
+                <textarea
+                  value={cancellationReason}
+                  onChange={(e) => setCancellationReason(e.target.value)}
+                  placeholder="Жишээ: Өвчтэй болсон, яаралтай ажил гарсан гэх мэт..."
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 flex gap-2">
+              <button
+                onClick={() => {
+                  setShowCancelModal(false);
+                  setCancellationReason("");
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                disabled={cancelling}
+              >
+                Буцах
+              </button>
+              <button
+                onClick={handleCancelBooking}
+                disabled={cancelling || !cancellationReason.trim()}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium disabled:bg-red-400"
+              >
+                {cancelling ? "Цуцлаж байна..." : "Цуцлах"}
               </button>
             </div>
           </div>
@@ -572,6 +986,59 @@ export default function ScheduleTab() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
+
+              {/* Weekday Selection */}
+              <div className="pt-4 border-t border-gray-200">
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Гарагуудыг сонгох
+                </label>
+                <div className="grid grid-cols-7 gap-2">
+                  {[
+                    { index: 1, label: "Да" },
+                    { index: 2, label: "Мя" },
+                    { index: 3, label: "Лх" },
+                    { index: 4, label: "Пү" },
+                    { index: 5, label: "Ба" },
+                    { index: 6, label: "Бя" },
+                    { index: 7, label: "Ня" },
+                  ].map((day) => (
+                    <button
+                      key={day.index}
+                      type="button"
+                      onClick={() => toggleWeekday(day.index)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
+                        selectedWeekdays.includes(day.index)
+                          ? "bg-indigo-600 text-white"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      }`}
+                    >
+                      {day.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  {selectedWeekdays.length} гараг сонгогдсон
+                </p>
+              </div>
+
+              {/* Weeks Count Input */}
+              <div>
+                <label htmlFor="weeksCount" className="block text-sm font-medium text-gray-700 mb-2">
+                  Хэдэн долоо хоногийн турш үүсгэх вэ?
+                </label>
+                <input
+                  type="number"
+                  id="weeksCount"
+                  min="1"
+                  max="12"
+                  value={weeksCount}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value) || 1;
+                    setWeeksCount(Math.max(1, Math.min(12, value)));
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
             </div>
 
             <div className="mt-6 flex gap-2">
@@ -593,6 +1060,193 @@ export default function ScheduleTab() {
           </div>
         </div>
       )}
+
+      {/* Edit Schedule Modal */}
+      {showEditModal && selectedSchedule && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-gray-900">Цагийн хуваарь засах</h2>
+              <button
+                onClick={() => {
+                  setShowEditModal(false);
+                  setSelectedSchedule(null);
+                }}
+                className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Date Display (Read-only) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Өдөр
+                </label>
+                <div className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-700">
+                  {new Date(selectedSchedule.date).toLocaleDateString("mn-MN", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </div>
+              </div>
+
+              {/* Open Time Input */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Нээх цаг
+                </label>
+                <input
+                  type="time"
+                  value={formData.openTime}
+                  onChange={(e) => setFormData({ ...formData, openTime: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              {/* Close Time Input */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Хаах цаг
+                </label>
+                <input
+                  type="time"
+                  value={formData.closeTime}
+                  onChange={(e) => setFormData({ ...formData, closeTime: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 flex gap-2">
+              <button
+                onClick={() => {
+                  setShowEditModal(false);
+                  setSelectedSchedule(null);
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                disabled={editing}
+              >
+                Цуцлах
+              </button>
+              <button
+                onClick={handleUpdateSchedule}
+                disabled={editing}
+                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium disabled:bg-indigo-400"
+              >
+                {editing ? "Шинэчилж байна..." : "Хадгалах"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Delete Modal */}
+      {showBulkDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-gray-900">Олноор устгах</h2>
+              <button
+                onClick={() => setShowBulkDeleteModal(false)}
+                className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Mode Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Устгах төрөл
+                </label>
+                <div className="space-y-2">
+                  <label className="flex items-center cursor-pointer p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                    <input
+                      type="radio"
+                      name="bulkDeleteMode"
+                      value="all"
+                      checked={bulkDeleteMode === "all"}
+                      onChange={() => setBulkDeleteMode("all")}
+                      className="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                    />
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-gray-900">Бүх ирээдүйн цагийн хуваарь</p>
+                      <p className="text-xs text-gray-500">Өнөөдрөөс хойшхи бүх цагийн хуваарийг устгана</p>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center cursor-pointer p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                    <input
+                      type="radio"
+                      name="bulkDeleteMode"
+                      value="range"
+                      checked={bulkDeleteMode === "range"}
+                      onChange={() => setBulkDeleteMode("range")}
+                      className="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                    />
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-gray-900">Огнооны мужаар</p>
+                      <p className="text-xs text-gray-500">Тодорхой хугацааны цагийн хуваарийг устгана</p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Date Range Inputs (only for range mode) */}
+              {bulkDeleteMode === "range" && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Эхлэх огноо
+                    </label>
+                    <input
+                      type="date"
+                      value={bulkDeleteStartDate}
+                      onChange={(e) => setBulkDeleteStartDate(e.target.value)}
+                      min={formatDateForApi(new Date())}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Дуусах огноо
+                    </label>
+                    <input
+                      type="date"
+                      value={bulkDeleteEndDate}
+                      onChange={(e) => setBulkDeleteEndDate(e.target.value)}
+                      min={bulkDeleteStartDate}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 flex gap-2">
+              <button
+                onClick={() => setShowBulkDeleteModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                disabled={bulkDeleting}
+              >
+                Цуцлах
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={bulkDeleting}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium disabled:bg-red-400"
+              >
+                {bulkDeleting ? "Устгаж байна..." : "Устгах"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -603,6 +1257,16 @@ function getMonday(date: Date): Date {
   const day = d.getDay();
   const diff = d.getDate() - day + (day === 0 ? -6 : 1);
   return new Date(d.setDate(diff));
+}
+
+function generateTimeOptions(): string[] {
+  const options: string[] = [];
+  // Generate times from 00:00 to 23:30 in 30-minute intervals
+  for (let hour = 0; hour < 24; hour++) {
+    options.push(`${String(hour).padStart(2, "0")}:00`);
+    options.push(`${String(hour).padStart(2, "0")}:30`);
+  }
+  return options;
 }
 
 function generateWeekDays(startDate: Date) {
@@ -632,7 +1296,15 @@ function generateTimeSlots(openTime: string, closeTime: string): string[] {
   while (currentMinutes < closeMinutes) {
     const hours = Math.floor(currentMinutes / 60);
     const mins = currentMinutes % 60;
-    const timeStr = `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+    const startTime = `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+
+    // Calculate end time (30 minutes later)
+    const endMinutes = currentMinutes + 30;
+    const endHours = Math.floor(endMinutes / 60);
+    const endMins = endMinutes % 60;
+    const endTime = `${String(endHours).padStart(2, "0")}:${String(endMins).padStart(2, "0")}`;
+
+    const timeStr = `${startTime} → ${endTime}`;
     slots.push(timeStr);
     currentMinutes += 30;
   }

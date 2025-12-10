@@ -7,7 +7,12 @@ interface User {
   email: string;
   fullName: string;
   role: "CUSTOMER" | "PROVIDER" | "ADMIN";
+  provider?: "LOCAL" | "GOOGLE";
   avatarUrl?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  district?: string;
   providerProfile?: any;
 }
 

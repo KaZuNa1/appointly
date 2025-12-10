@@ -5,37 +5,37 @@ export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-gradient-to-b from-gray-900 to-gray-950 text-gray-300">
+    <footer className="bg-gradient-to-b from-gray-900 to-gray-950 text-gray-300 mt-32">
 
       {/* Main Footer Content */}
-      <div className="max-w-7xl mx-auto px-6 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12">
+      <div className="max-w-7xl mx-auto px-6 py-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
 
           {/* Company Info */}
           <div className="lg:col-span-2">
-            <Link to="/" className="text-3xl font-bold text-white mb-4 inline-block">
+            <Link to="/" className="text-xl font-bold text-white mb-2 inline-block">
               Appointly
             </Link>
-            <p className="text-gray-400 mb-6 leading-relaxed">
+            <p className="text-gray-400 mb-2 leading-relaxed text-xs">
               Монголын үйлчилгээ үзүүлэгчид болон хэрэглэгчдийг холбож, цаг захиалалтыг илүү хялбар, түргэн, найдвартай болгож байна.
             </p>
 
             {/* Contact Info */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 text-sm">
-                <Mail className="w-4 h-4 text-indigo-400" />
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-xs">
+                <Mail className="w-3 h-3 text-indigo-400" />
                 <a href="mailto:support@appointly.mn" className="hover:text-white transition">
                   support@appointly.mn
                 </a>
               </div>
-              <div className="flex items-center gap-3 text-sm">
-                <Phone className="w-4 h-4 text-indigo-400" />
+              <div className="flex items-center gap-2 text-xs">
+                <Phone className="w-3 h-3 text-indigo-400" />
                 <a href="tel:+97670123456" className="hover:text-white transition">
                   +976 7012-3456
                 </a>
               </div>
-              <div className="flex items-center gap-3 text-sm">
-                <MapPin className="w-4 h-4 text-indigo-400" />
+              <div className="flex items-center gap-2 text-xs">
+                <MapPin className="w-3 h-3 text-indigo-400" />
                 <span>Улаанбаатар, Монгол улс</span>
               </div>
             </div>
@@ -43,8 +43,8 @@ export default function Footer() {
 
           {/* Product Links */}
           <div>
-            <h3 className="text-white font-semibold mb-4">Бүтээгдэхүүн</h3>
-            <ul className="space-y-3 text-sm">
+            <h3 className="text-white font-semibold mb-2 text-xs">Бүтээгдэхүүн</h3>
+            <ul className="space-y-1 text-xs">
               <li>
                 <Link to="/services" className="hover:text-white hover:translate-x-1 inline-block transition">
                   Үйлчилгээнүүд
@@ -65,8 +65,8 @@ export default function Footer() {
 
           {/* Company Links */}
           <div>
-            <h3 className="text-white font-semibold mb-4">Компани</h3>
-            <ul className="space-y-3 text-sm">
+            <h3 className="text-white font-semibold mb-2 text-xs">Компани</h3>
+            <ul className="space-y-1 text-xs">
               <li>
                 <Link to="/about" className="hover:text-white hover:translate-x-1 inline-block transition">
                   Бидний тухай
@@ -92,8 +92,8 @@ export default function Footer() {
 
           {/* Legal Links */}
           <div>
-            <h3 className="text-white font-semibold mb-4">Хууль эрх зүй</h3>
-            <ul className="space-y-3 text-sm">
+            <h3 className="text-white font-semibold mb-2 text-xs">Хууль эрх зүй</h3>
+            <ul className="space-y-1 text-xs">
               <li>
                 <Link to="/terms" className="hover:text-white hover:translate-x-1 inline-block transition">
                   Үйлчилгээний нөхцөл
@@ -121,11 +121,11 @@ export default function Footer() {
 
       {/* Bottom Bar */}
       <div className="border-t border-gray-800">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="max-w-7xl mx-auto px-6 py-2">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-2">
 
             {/* Copyright */}
-            <p className="text-gray-500 text-sm text-center md:text-left">
+            <p className="text-gray-500 text-xs text-center md:text-left">
               © {currentYear} Appointly. Бүх эрх хуулиар хамгаалагдсан.
             </p>
 

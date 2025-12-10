@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import api from "@/lib/api";
 import { logout } from "@/lib/auth";
@@ -17,10 +17,22 @@ type TabType = "info" | "schedule" | "services" | "settings";
 export default function ProviderDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<TabType>("schedule"); // Start with schedule (priority)
   const [providerData, setProviderData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [avatar, setAvatar] = useState<string | null>(null);
+
+  // Check URL params for tab on mount and when searchParams change
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab && ["schedule", "services", "info", "settings"].includes(tab)) {
+      setActiveTab(tab as TabType);
+    } else {
+      // Default to schedule if no tab parameter
+      setActiveTab("schedule");
+    }
+  }, [searchParams]);
 
   // Fetch provider data and avatar
   useEffect(() => {
@@ -109,15 +121,15 @@ export default function ProviderDashboard() {
       <div className="flex flex-1">
         {/* Left Sidebar */}
         <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
-          {/* Logo/Brand */}
-          <div className="p-6 border-b border-gray-200">
-            <h1 className="text-2xl font-bold text-indigo-600">Appointly</h1>
-            <p className="text-sm text-gray-600 mt-1">Бизнес самбар</p>
-          </div>
-
-          {/* Provider Avatar Section */}
+          {/* Business Profile Section */}
           <div className="p-6 border-b border-gray-200">
             <div className="flex flex-col items-center">
+              {/* Business Nickname - Main Heading */}
+              <h2 className="text-xl font-bold text-gray-900 text-center mb-4">
+                {providerData?.providerProfile?.nickname || "Бизнесийн нэр"}
+              </h2>
+
+              {/* Avatar */}
               {avatar ? (
                 <img
                   src={avatar}
@@ -129,8 +141,14 @@ export default function ProviderDashboard() {
                   <span className="text-3xl">👨‍💼</span>
                 </div>
               )}
-              <p className="text-sm font-medium text-gray-900 text-center">{providerData?.fullName}</p>
-              <label className="mt-3 px-3 py-1 text-xs bg-indigo-50 text-indigo-600 rounded-lg cursor-pointer hover:bg-indigo-100 transition-colors">
+
+              {/* Owner Name - Small Info */}
+              <p className="text-xs text-gray-500 text-center mb-3">
+                Эзэмшигч: {providerData?.fullName}
+              </p>
+
+              {/* Change Avatar Button */}
+              <label className="px-3 py-1 text-xs bg-indigo-50 text-indigo-600 rounded-lg cursor-pointer hover:bg-indigo-100 transition-colors">
                 📷 Зургаа солих
                 <input
                   type="file"

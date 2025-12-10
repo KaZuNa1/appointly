@@ -2,6 +2,7 @@ import { useState } from "react";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { BUSINESS_TYPES } from "@/data/businessTypes";
+import { PROVINCES, ALL_DISTRICTS } from "@/data/locations";
 
 interface Props {
   providerData: any;
@@ -15,6 +16,7 @@ export default function InfoTab({ providerData, onRefresh }: Props) {
   const [form, setForm] = useState({
     fullName: providerData?.fullName || "",
     businessName: providerData?.providerProfile?.businessName || "",
+    nickname: providerData?.providerProfile?.nickname || "",
     category: providerData?.providerProfile?.category || "",
     phone: providerData?.providerProfile?.phone || "",
     city: providerData?.providerProfile?.city || "",
@@ -41,6 +43,7 @@ export default function InfoTab({ providerData, onRefresh }: Props) {
       // Update provider profile
       await api.put("/providers/profile", {
         businessName: form.businessName,
+        nickname: form.nickname,
         category: form.category,
         phone: form.phone,
         city: form.city,
@@ -67,6 +70,7 @@ export default function InfoTab({ providerData, onRefresh }: Props) {
     setForm({
       fullName: providerData?.fullName || "",
       businessName: providerData?.providerProfile?.businessName || "",
+      nickname: providerData?.providerProfile?.nickname || "",
       category: providerData?.providerProfile?.category || "",
       phone: providerData?.providerProfile?.phone || "",
       city: providerData?.providerProfile?.city || "",
@@ -90,10 +94,10 @@ export default function InfoTab({ providerData, onRefresh }: Props) {
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
         <div className="space-y-6">
-          {/* Full Name */}
+          {/* Owner's Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Бүтэн нэр
+              Эзэмшигчийн нэр
             </label>
             {isEditing ? (
               <input
@@ -105,6 +109,9 @@ export default function InfoTab({ providerData, onRefresh }: Props) {
             ) : (
               <p className="text-gray-900 py-2">{form.fullName || "—"}</p>
             )}
+            <p className="text-xs text-gray-500 mt-1">
+              Бизнес эзэмшигчийн хувийн нэр
+            </p>
           </div>
 
           {/* Email (read-only) */}
@@ -114,14 +121,38 @@ export default function InfoTab({ providerData, onRefresh }: Props) {
             </label>
             <p className="text-gray-900 py-2">{providerData?.email || "—"}</p>
             <p className="text-xs text-gray-500 mt-1">
-              Имэйл хаягийг тохиргоо хэсгээс солих боломжтой
+              Имэйл хаягийг өөрчлөх боломжгүй
             </p>
           </div>
 
-          {/* Business Name */}
+          <div className="border-t border-gray-200 pt-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Компанийн мэдээлэл</h3>
+          </div>
+
+          {/* Company Nickname (Display Name) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Бизнесийн нэр
+              Компанийн товч нэр
+            </label>
+            {isEditing ? (
+              <input
+                type="text"
+                value={form.nickname}
+                onChange={(e) => handleChange("nickname", e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+            ) : (
+              <p className="text-gray-900 py-2 text-lg font-semibold">{form.nickname || "—"}</p>
+            )}
+            <p className="text-xs text-gray-500 mt-1">
+              Хэрэглэгчдэд харагдах богино, дурсамжтай нэр
+            </p>
+          </div>
+
+          {/* Company Official Name */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Компанийн албан ёсны нэр
             </label>
             {isEditing ? (
               <input
@@ -133,6 +164,9 @@ export default function InfoTab({ providerData, onRefresh }: Props) {
             ) : (
               <p className="text-gray-900 py-2">{form.businessName || "—"}</p>
             )}
+            <p className="text-xs text-gray-500 mt-1">
+              Компанийн бүртгэлтэй албан ёсны нэр
+            </p>
           </div>
 
           {/* Category */}
@@ -165,18 +199,24 @@ export default function InfoTab({ providerData, onRefresh }: Props) {
             )}
           </div>
 
-          {/* City */}
+          {/* City/Province */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Хот
+              Хот/Аймаг
             </label>
             {isEditing ? (
-              <input
-                type="text"
+              <select
                 value={form.city}
                 onChange={(e) => handleChange("city", e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              />
+              >
+                <option value=""></option>
+                {PROVINCES.map((province) => (
+                  <option key={province} value={province}>
+                    {province}
+                  </option>
+                ))}
+              </select>
             ) : (
               <p className="text-gray-900 py-2">{form.city || "—"}</p>
             )}
@@ -188,31 +228,38 @@ export default function InfoTab({ providerData, onRefresh }: Props) {
               Дүүрэг
             </label>
             {isEditing ? (
-              <input
-                type="text"
+              <select
                 value={form.district}
                 onChange={(e) => handleChange("district", e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              />
+              >
+                <option value=""></option>
+                {ALL_DISTRICTS.map((district) => (
+                  <option key={district} value={district}>
+                    {district}
+                  </option>
+                ))}
+              </select>
             ) : (
               <p className="text-gray-900 py-2">{form.district || "—"}</p>
             )}
           </div>
 
-          {/* Address */}
+          {/* Detailed Address */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Хаяг
+              Дэлгэрэнгүй хаяг
             </label>
             {isEditing ? (
-              <input
-                type="text"
+              <textarea
                 value={form.address}
                 onChange={(e) => handleChange("address", e.target.value)}
+                rows={3}
+                placeholder="Гудамж, байр, орц, тоот..."
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
             ) : (
-              <p className="text-gray-900 py-2">{form.address || "—"}</p>
+              <p className="text-gray-900 py-2 whitespace-pre-wrap">{form.address || "—"}</p>
             )}
           </div>
 

@@ -17,6 +17,7 @@ router.get("/", async (req, res) => {
             id: true,
             fullName: true,
             email: true,
+            avatarUrl: true,
           },
         },
         services: true,
@@ -54,6 +55,7 @@ router.get("/by-service/:serviceName", async (req, res) => {
             id: true,
             fullName: true,
             email: true,
+            avatarUrl: true,
           },
         },
         services: {
@@ -80,6 +82,7 @@ router.put("/profile", authMiddleware, async (req: any, res) => {
     const userId = req.user.id;
     const {
       businessName,
+      nickname,
       category,
       phone,
       city,
@@ -102,6 +105,7 @@ router.put("/profile", authMiddleware, async (req: any, res) => {
     // Build update data - only include fields that are provided
     const updateData: any = {
       businessName,
+      nickname,
       category,
       phone,
       city,
@@ -130,6 +134,66 @@ router.put("/profile", authMiddleware, async (req: any, res) => {
     });
   } catch (err) {
     console.error("UPDATE PROVIDER ERROR:", err);
+    return res.status(500).json({ msg: "Сервер алдаа гарлаа." });
+  }
+});
+
+/**
+ * PUT /api/providers/:id
+ * Update provider settings (booking configuration, etc.)
+ */
+router.put("/:id", authMiddleware, async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    const { slotInterval, bookingWindowWeeks, cancellationHours } = req.body;
+
+    // Verify this provider belongs to the current user
+    const provider = await prisma.businessProvider.findUnique({
+      where: { id },
+    });
+
+    if (!provider) {
+      return res.status(404).json({ msg: "Бизнес профайл олдсонгүй." });
+    }
+
+    if (provider.userId !== userId) {
+      return res.status(403).json({ msg: "Зөвхөн өөрийн профайл засах эрхтэй." });
+    }
+
+    // Validate slot interval
+    if (slotInterval && ![15, 30, 60].includes(slotInterval)) {
+      return res.status(400).json({ msg: "Цагийн интервал 15, 30, эсвэл 60 минут байх ёстой." });
+    }
+
+    // Validate booking window weeks
+    if (bookingWindowWeeks && (bookingWindowWeeks < 1 || bookingWindowWeeks > 4)) {
+      return res.status(400).json({ msg: "Захиалгын хугацаа 1-4 долоо хоног байх ёстой." });
+    }
+
+    // Validate cancellation hours
+    if (cancellationHours && ![1, 2, 3, 6, 12, 24, 48, 72].includes(cancellationHours)) {
+      return res.status(400).json({ msg: "Цуцлах бодлого 1, 2, 3, 6, 12, 24, 48, эсвэл 72 цаг байх ёстой." });
+    }
+
+    // Build update data
+    const updateData: any = {};
+    if (slotInterval !== undefined) updateData.slotInterval = slotInterval;
+    if (bookingWindowWeeks !== undefined) updateData.bookingWindowWeeks = bookingWindowWeeks;
+    if (cancellationHours !== undefined) updateData.cancellationHours = cancellationHours;
+
+    // Update provider
+    const updated = await prisma.businessProvider.update({
+      where: { id },
+      data: updateData,
+    });
+
+    return res.status(200).json({
+      msg: "Тохиргоо амжилттай шинэчлэгдлээ!",
+      provider: updated,
+    });
+  } catch (err) {
+    console.error("UPDATE PROVIDER SETTINGS ERROR:", err);
     return res.status(500).json({ msg: "Сервер алдаа гарлаа." });
   }
 });

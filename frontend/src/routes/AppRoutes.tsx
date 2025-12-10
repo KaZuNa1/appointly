@@ -4,6 +4,7 @@ import { ProtectedRoute } from "./ProtectedRoute";
 // MAIN PAGES
 import Home from "@/pages/Home";
 import Services from "@/pages/Services";
+import ServiceResults from "@/pages/ServiceResults";
 import Providers from "@/pages/Providers";
 import ProviderProfile from "@/pages/ProviderProfile";
 import BookingConfirmation from "@/pages/BookingConfirmation";
@@ -32,6 +33,16 @@ import Dashboard from "@/pages/Dashboard";
 // PROVIDER DASHBOARD
 import ProviderDashboard from "@/pages/ProviderDashboard";
 
+// NOTIFICATIONS
+import Inbox from "@/pages/Inbox";
+
+// ADMIN DASHBOARD
+import AdminDashboard from "@/pages/AdminDashboard";
+import AdminUsers from "@/pages/AdminUsers";
+import AdminProviders from "@/pages/AdminProviders";
+import AdminBookings from "@/pages/AdminBookings";
+import AdminAuditLogs from "@/pages/AdminAuditLogs";
+
 export function AppRoutes() {
   return (
     <Routes>
@@ -41,6 +52,7 @@ export function AppRoutes() {
       ======================== */}
       <Route path="/" element={<Home />} />
       <Route path="/services" element={<Services />} />
+      <Route path="/service-results" element={<ServiceResults />} />
       <Route path="/providers" element={<Providers />} />
       <Route path="/providers/:id" element={<ProviderProfile />} />
 
@@ -97,6 +109,62 @@ export function AppRoutes() {
         element={
           <ProtectedRoute role="PROVIDER">
             <ProviderDashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* =======================
+          INBOX (ALL AUTHENTICATED USERS)
+      ======================== */}
+      <Route
+        path="/inbox"
+        element={
+          <ProtectedRoute>
+            <Inbox />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* =======================
+          ADMIN DASHBOARD (ADMINS ONLY)
+      ======================== */}
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute role="ADMIN">
+            <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/users"
+        element={
+          <ProtectedRoute role="ADMIN">
+            <AdminUsers />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/providers"
+        element={
+          <ProtectedRoute role="ADMIN">
+            <AdminProviders />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/bookings"
+        element={
+          <ProtectedRoute role="ADMIN">
+            <AdminBookings />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/audit-logs"
+        element={
+          <ProtectedRoute role="ADMIN">
+            <AdminAuditLogs />
           </ProtectedRoute>
         }
       />

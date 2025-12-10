@@ -24,7 +24,7 @@ const generateVerificationToken = () => {
 };
 
 const getTokenExpiry = () => {
-  return new Date(Date.now() + 30 * 60 * 1000); // 30 minutes from now
+  return new Date(Date.now() + 5 * 60 * 1000); // 5 minutes from now
 };
 
 // ----------------------
@@ -109,7 +109,7 @@ export const registerBusiness = async (req: Request, res: Response) => {
       district
     } = req.body;
 
-    if (!fullName || !email || !password || !businessName || !category)
+    if (!fullName || !email || !password || !businessName || !nickname || !category || !phone)
       return res.status(400).json({ msg: "Бүх шаардлагатай талбарыг бөглөнө үү." });
 
     // Password validation: minimum 8 characters, must contain number and letter
@@ -247,20 +247,31 @@ export const getProfile = async (req: any, res: Response) => {
 };
 
 // ----------------------
-// 5. UPDATE PROFILE (fullName)
+// 5. UPDATE PROFILE (fullName, phone, address, city, district)
 // ----------------------
 export const updateProfile = async (req: any, res: Response) => {
   try {
     const userId = req.user.id;
-    const { fullName } = req.body;
+    const { fullName, phone, address, city, district } = req.body;
 
-    if (!fullName) {
-      return res.status(400).json({ msg: "Нэр оруулна уу." });
+    // Build update data object with only provided fields
+    const updateData: any = {};
+
+    if (fullName !== undefined) updateData.fullName = fullName;
+    if (phone !== undefined) updateData.phone = phone;
+    if (address !== undefined) updateData.address = address;
+    if (city !== undefined) updateData.city = city;
+    if (district !== undefined) updateData.district = district;
+
+    // At least one field must be provided
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ msg: "Шинэчлэх мэдээлэл оруулна уу." });
     }
 
     const user = await prisma.user.update({
       where: { id: userId },
-      data: { fullName }
+      data: updateData,
+      include: { providerProfile: true }
     });
 
     return res.status(200).json({ msg: "Амжилттай шинэчлэгдлээ!", user });
@@ -315,6 +326,13 @@ export const updatePassword = async (req: any, res: Response) => {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
       return res.status(404).json({ msg: "Хэрэглэгч олдсонгүй." });
+    }
+
+    // Check if user is Google OAuth user (no password)
+    if (!user.password || user.provider === 'GOOGLE') {
+      return res.status(400).json({
+        msg: "Та Google-ээр нэвтэрсэн тул нууц үгээ энд өөрчлөх боломжгүй. Google аккаунтаасаа удирдана уу."
+      });
     }
 
     // Verify current password
@@ -401,7 +419,13 @@ export const verifyEmail = async (req: Request, res: Response) => {
 
     // Check if already verified
     if (user.emailVerified) {
-      return res.status(400).json({ msg: "Имэйл аль хэдийн баталгаажсан байна." });
+      // Already verified - return success with token (no error flash)
+      return res.status(200).json({
+        msg: "Имэйл аль хэдийн баталгаажсан байна.",
+        user: user,
+        token: generateToken(user),
+        alreadyVerified: true
+      });
     }
 
     // Verify email

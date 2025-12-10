@@ -20,7 +20,20 @@
       "Bash(node migrate-nickname.js:*)",
       "Bash(node migrate-email-verification.js:*)",
       "Bash(node migrate-password-reset.js:*)",
-      "Bash(node migrate-google-oauth.js:*)"
+      "Bash(node migrate-google-oauth.js:*)",
+      "Bash(taskkill:*)",
+      "Bash(ls:*)",
+      "Bash(node migrate-nickname-required.js:*)",
+      "Bash(PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=\"yes\" npx prisma db push:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:Tuugii11@db.myxqdulxujwswopedzlf.supabase.co:5432/postgres\" npx prisma db push:*)",
+      "Bash(curl -s http://localhost:4000/api/providers)",
+      "Bash(npm run seed:*)",
+      "Bash(npx tsc:*)",
+      "Bash(node test-notification.js:*)",
+      "Bash(del:*)",
+      "Bash(curl:*)",
+      "Bash(node:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

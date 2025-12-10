@@ -1,66 +1,59 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { X } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Scissors, Sparkles, Pen, Stethoscope, Car, Camera, Heart } from "lucide-react";
 
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { BUSINESS_TYPES, ServiceTemplate } from "@/data/businessTypes";
-import api from "@/lib/api";
 
-interface Provider {
-  id: string;
-  businessName: string;
-  category: string;
-  phone: string;
-  city: string;
-  district: string;
-  address: string;
-  description: string;
-  user: {
-    fullName: string;
-    email: string;
-  };
-  services: {
-    id: string;
-    name: string;
-    duration: number;
-    price: number;
-    description: string | null;
-  }[];
-}
+// Category icons mapping
+const CATEGORY_ICONS: Record<string, React.ComponentType<any>> = {
+  barber: Scissors,
+  beauty: Sparkles,
+  tattoo: Pen,
+  dental: Stethoscope,
+  carwash: Car,
+  photography: Camera,
+  psychology: Heart,
+};
 
 const Services: React.FC = () => {
   const navigate = useNavigate();
-  const [selectedService, setSelectedService] = useState<ServiceTemplate | null>(null);
-  const [providers, setProviders] = useState<Provider[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [showModal, setShowModal] = useState(false);
+  const { user } = useAuth();
+  const [selectedCategory, setSelectedCategory] = useState<string>(BUSINESS_TYPES[0]?.id || "");
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string>("all");
 
-  const handleServiceClick = async (service: ServiceTemplate) => {
-    setSelectedService(service);
-    setShowModal(true);
-    setLoading(true);
-
-    try {
-      const serviceName = encodeURIComponent(service.name);
-      const res = await api.get(`/providers/by-service/${serviceName}`);
-      setProviders(res.data.providers || []);
-    } catch (err) {
-      console.error("Error fetching providers:", err);
-      setProviders([]);
-    } finally {
-      setLoading(false);
+  // Redirect admins to admin dashboard
+  useEffect(() => {
+    if (user?.role === "ADMIN") {
+      navigate("/admin");
     }
+  }, [user, navigate]);
+
+  const handleServiceClick = (service: ServiceTemplate) => {
+    // Navigate to service results page
+    navigate(`/service-results?serviceId=${service.id}&serviceName=${encodeURIComponent(service.name)}`);
   };
 
-  const handleProviderClick = (providerId: string) => {
-    navigate(`/providers/${providerId}`);
-  };
+  const currentCategory = BUSINESS_TYPES.find(type => type.id === selectedCategory);
 
-  const closeModal = () => {
-    setShowModal(false);
-    setSelectedService(null);
-    setProviders([]);
+  // Get subcategories for the current category
+  const subcategories = currentCategory
+    ? Array.from(new Set(currentCategory.services.map(s => s.category).filter(Boolean)))
+    : [];
+
+  // Filter services by subcategory
+  const filteredServices = currentCategory
+    ? selectedSubcategory === "all"
+      ? currentCategory.services
+      : currentCategory.services.filter(s => s.category === selectedSubcategory)
+    : [];
+
+  // Reset subcategory when category changes
+  const handleCategoryChange = (categoryId: string) => {
+    setSelectedCategory(categoryId);
+    setSelectedSubcategory("all");
   };
 
   return (
@@ -69,131 +62,121 @@ const Services: React.FC = () => {
 
       {/* Header */}
       <section className="bg-white border-b border-gray-100">
-        <div className="max-w-6xl mx-auto px-6 py-16 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+        <div className="max-w-7xl mx-auto px-6 py-8 text-center">
+          <h1 className="text-2xl font-bold text-gray-900">
             Үйлчилгээ сонгох
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Та авахыг хүссэн үйлчилгээгээ сонгоод, тухайн үйлчилгээ үзүүлэгчдээс сонгож цаг захиална.
-          </p>
         </div>
       </section>
 
       {/* Content */}
       <main className="flex-1">
-        <section className="py-16">
-          <div className="max-w-6xl mx-auto px-6">
-            {BUSINESS_TYPES.map((businessType) => (
-              <div key={businessType.id} className="mb-12">
-                <h2 className="text-3xl font-bold text-gray-900 mb-6">
-                  {businessType.label}
-                </h2>
+        <section className="py-12">
+          <div className="max-w-7xl mx-auto px-6">
+            {/* Category Tabs */}
+            <div className="mb-10">
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-2">
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
+                  {BUSINESS_TYPES.map((type) => {
+                    const Icon = CATEGORY_ICONS[type.id] || Sparkles;
+                    const isActive = selectedCategory === type.id;
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {businessType.services.map((service) => (
-                    <button
-                      key={service.id}
-                      onClick={() => handleServiceClick(service)}
-                      className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-lg hover:border-indigo-500 transition text-left"
-                    >
-                      <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                        {service.name}
-                      </h3>
-                      {service.description && (
-                        <p className="text-gray-600 text-sm">
-                          {service.description}
-                        </p>
-                      )}
-                    </button>
-                  ))}
+                    return (
+                      <button
+                        key={type.id}
+                        onClick={() => handleCategoryChange(type.id)}
+                        className={`flex flex-col items-center justify-center p-4 rounded-xl transition ${
+                          isActive
+                            ? "bg-indigo-600 text-white shadow-md"
+                            : "text-gray-700 hover:bg-gray-50"
+                        }`}
+                      >
+                        <Icon className={`w-6 h-6 mb-2 ${isActive ? "text-white" : "text-indigo-600"}`} />
+                        <span className="text-sm font-medium text-center">
+                          {type.label}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
-            ))}
+            </div>
+
+            {/* Services Grid */}
+            {currentCategory && (
+              <div>
+                <div className="mb-6">
+                  <h2 className="text-3xl font-bold text-gray-900">
+                    {currentCategory.label}
+                  </h2>
+                  <p className="text-gray-600 mt-2">
+                    {filteredServices.length} үйлчилгээ боломжтой
+                  </p>
+                </div>
+
+                {/* Subcategory Filter (only show if subcategories exist) */}
+                {subcategories.length > 0 && (
+                  <div className="mb-6">
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => setSelectedSubcategory("all")}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                          selectedSubcategory === "all"
+                            ? "bg-indigo-600 text-white"
+                            : "bg-white text-gray-700 border border-gray-300 hover:border-indigo-600"
+                        }`}
+                      >
+                        Бүгд
+                      </button>
+                      {subcategories.map((subcat) => (
+                        <button
+                          key={subcat}
+                          onClick={() => setSelectedSubcategory(subcat)}
+                          className={`px-4 py-2 rounded-lg text-sm font-medium transition capitalize ${
+                            selectedSubcategory === subcat
+                              ? "bg-indigo-600 text-white"
+                              : "bg-white text-gray-700 border border-gray-300 hover:border-indigo-600"
+                          }`}
+                        >
+                          {subcat}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                  {filteredServices.map((service) => {
+                    const CategoryIcon = CATEGORY_ICONS[currentCategory.id] || Sparkles;
+
+                    return (
+                      <button
+                        key={service.id}
+                        onClick={() => handleServiceClick(service)}
+                        className="group bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-xl hover:border-indigo-500 hover:-translate-y-1 transition-all duration-200 text-left"
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="w-12 h-12 rounded-lg bg-indigo-50 flex items-center justify-center group-hover:bg-indigo-100 transition">
+                            <CategoryIcon className="w-6 h-6 text-indigo-600" />
+                          </div>
+                        </div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                          {service.name}
+                        </h3>
+                        {service.description && (
+                          <p className="text-gray-600 text-sm line-clamp-3 min-h-[60px]">
+                            {service.description}
+                          </p>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </section>
       </main>
-
-      {/* Providers Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">
-                  {selectedService?.name}
-                </h2>
-                <p className="text-gray-600 mt-1">
-                  Үйлчилгээ үзүүлэгч сонгох
-                </p>
-              </div>
-              <button
-                onClick={closeModal}
-                className="p-2 hover:bg-gray-100 rounded-lg transition"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="p-6">
-              {loading ? (
-                <div className="text-center py-12">
-                  <p className="text-gray-600">Уншиж байна...</p>
-                </div>
-              ) : providers.length > 0 ? (
-                <div className="space-y-4">
-                  {providers.map((provider) => (
-                    <div
-                      key={provider.id}
-                      onClick={() => handleProviderClick(provider.id)}
-                      className="bg-gray-50 rounded-lg p-6 border border-gray-200 hover:border-indigo-500 hover:shadow-md transition cursor-pointer"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                            {provider.businessName}
-                          </h3>
-                          <p className="text-gray-600 text-sm mb-3">
-                            {provider.description || "Үйлчилгээний тайлбар байхгүй"}
-                          </p>
-                          <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                            {provider.city && (
-                              <span>📍 {provider.city}{provider.district ? `, ${provider.district}` : ""}</span>
-                            )}
-                            {provider.phone && (
-                              <span>📞 {provider.phone}</span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="ml-4 text-right">
-                          {provider.services[0] && (
-                            <>
-                              <p className="text-2xl font-bold text-indigo-600">
-                                {provider.services[0].price.toLocaleString()}₮
-                              </p>
-                              <p className="text-sm text-gray-500">
-                                {provider.services[0].duration} минут
-                              </p>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12 bg-gray-50 rounded-lg">
-                  <p className="text-gray-500 text-lg">
-                    Энэ үйлчилгээг үзүүлэгч одоогоор байхгүй байна
-                  </p>
-                  <p className="text-gray-400 text-sm mt-2">
-                    Дараа дахин оролдоно уу
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       <Footer />
     </div>

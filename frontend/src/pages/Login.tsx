@@ -46,6 +46,8 @@ export default function Login() {
       // Role-based redirect
       if (user.role === "PROVIDER") {
         navigate("/provider/dashboard");
+      } else if (user.role === "ADMIN") {
+        navigate("/admin");
       } else {
         navigate("/dashboard");
       }

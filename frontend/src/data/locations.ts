@@ -36,3 +36,9 @@ export const UB_DISTRICTS = [
   "Хан-Уул",
   "Чингэлтэй"
 ];
+
+// All districts including rural areas and UB districts
+export const ALL_DISTRICTS = [
+  "Хөдөө орон нутаг",
+  ...UB_DISTRICTS
+];

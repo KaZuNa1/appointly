@@ -87,7 +87,7 @@ export const sendVerificationEmail = async ({
           </div>
 
           <div class="warning">
-            <strong>⏰ Анхаар:</strong> Энэ холбоос 30 минутын дараа хүчингүй болно.
+            <strong>⏰ Анхаар:</strong> Энэ холбоос 5 минутын дараа хүчингүй болно.
           </div>
 
           <p>Хэрэв та бүртгэл үүсгээгүй бол энэ имэйлийг үл хэрэгсэх боломжтой.</p>
@@ -103,14 +103,19 @@ export const sendVerificationEmail = async ({
   `;
 
   try {
-    await resend.emails.send({
-      from: 'Appointly <onboarding@resend.dev>', // Use verified domain in production
+    const { data, error } = await resend.emails.send({
+      from: 'Appointly <noreply@appointly.space>',
       to: email,
       subject: 'Appointly - Имэйл хаягаа баталгаажуулна уу',
       html: emailHtml
     });
 
-    console.log(`✅ Verification email sent to ${email}`);
+    if (error) {
+      console.error('❌ Resend API error:', error);
+      throw new Error(`Resend error: ${error.message}`);
+    }
+
+    console.log(`✅ Verification email sent to ${email}. Email ID: ${data?.id}`);
   } catch (error) {
     console.error('❌ Error sending verification email:', error);
     throw new Error('Имэйл илгээхэд алдаа гарлаа');
@@ -209,7 +214,7 @@ export const sendPasswordResetEmail = async ({
           </div>
 
           <div class="warning">
-            <strong>⏰ Анхаар:</strong> Энэ холбоос 30 минутын дараа хүчингүй болно.
+            <strong>⏰ Анхаар:</strong> Энэ холбоос 5 минутын дараа хүчингүй болно.
           </div>
 
           <div class="security-notice">
@@ -227,14 +232,19 @@ export const sendPasswordResetEmail = async ({
   `;
 
   try {
-    await resend.emails.send({
-      from: 'Appointly <onboarding@resend.dev>',
+    const { data, error } = await resend.emails.send({
+      from: 'Appointly <noreply@appointly.space>',
       to: email,
       subject: 'Appointly - Нууц үг сэргээх',
       html: emailHtml
     });
 
-    console.log(`✅ Password reset email sent to ${email}`);
+    if (error) {
+      console.error('❌ Resend API error:', error);
+      throw new Error(`Resend error: ${error.message}`);
+    }
+
+    console.log(`✅ Password reset email sent to ${email}. Email ID: ${data?.id}`);
   } catch (error) {
     console.error('❌ Error sending password reset email:', error);
     throw new Error('Имэйл илгээхэд алдаа гарлаа');

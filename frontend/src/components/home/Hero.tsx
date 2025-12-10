@@ -1,9 +1,12 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Hero() {
+  const { user } = useAuth();
+
   return (
-    <section className="bg-gradient-to-b from-gray-50 to-white py-20">
+    <section className="bg-gray-50 py-20">
       <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-14 items-center">
 
         {/* LEFT */}
@@ -18,25 +21,34 @@ export default function Hero() {
           </p>
 
           <div className="flex gap-4">
-            {/* USER BOOKING */}
-            <Link to="/services">
-              <Button size="lg" className="px-8 py-6 text-lg">
-                Цаг захиалах
-              </Button>
-            </Link>
+            {/* If user is logged in (both PROVIDER and CUSTOMER) */}
+            {user ? (
+              <Link to="/dashboard">
+                <Button size="lg" className="px-8 py-6 text-lg">
+                  Хяналтын самбар руу шилжих
+                </Button>
+              </Link>
+            ) : (
+              <>
+                {/* USER BOOKING - Only for non-logged users */}
+                <Link to="/services">
+                  <Button size="lg" className="px-8 py-6 text-lg">
+                    Цаг захиалах
+                  </Button>
+                </Link>
 
-            {/* BUSINESS SIGNUP */}
-           {/* BUSINESS SIGNUP */}
-<Link to="/business/register">
-  <Button 
-    variant="outline"
-    size="lg"
-    className="px-8 py-6 text-lg"
-  >
-    Бизнесээ бүртгүүлэх
-  </Button>
-</Link>
-
+                {/* BUSINESS SIGNUP - Only for non-logged users */}
+                <Link to="/business/register">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="px-8 py-6 text-lg"
+                  >
+                    Бизнесээ бүртгүүлэх
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
 

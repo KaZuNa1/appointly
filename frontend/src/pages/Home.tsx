@@ -1,3 +1,6 @@
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 
@@ -8,9 +11,19 @@ import Steps from "@/components/home/Steps";
 import Pricing from "@/components/home/Pricing";
 
 export default function Home() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  // Redirect admins to admin dashboard
+  useEffect(() => {
+    if (user?.role === "ADMIN") {
+      navigate("/admin");
+    }
+  }, [user, navigate]);
+
   return (
     <div className="min-h-screen flex flex-col">
-      
+
       {/* Navbar */}
       <Navbar />
 

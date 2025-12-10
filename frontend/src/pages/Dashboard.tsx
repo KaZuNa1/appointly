@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSearchParams } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import api from "@/lib/api";
@@ -16,12 +17,18 @@ import {
   Phone,
   MapPin,
   Camera,
+  Heart,
+  Building2,
 } from "lucide-react";
+import { getBookmarks, removeBookmark } from "@/lib/bookmarks";
+import { toast } from "sonner";
+import { Link } from "react-router-dom";
 
 interface Booking {
   id: string;
   appointmentTime: string;
   status: string;
+  cancellationReason?: string;
   service: {
     name: string;
     duration: number;
@@ -38,14 +45,45 @@ interface Booking {
     address?: string;
     latitude?: number;
     longitude?: number;
+    cancellationHours?: number;
   };
 }
 
+interface BookmarkedProvider {
+  id: string;
+  businessName: string;
+  nickname: string;
+  phone: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  user: {
+    fullName: string;
+    avatarUrl: string | null;
+  };
+  services: {
+    id: string;
+    name: string;
+    price: number;
+  }[];
+}
+
 export default function Dashboard() {
-  const { user, loading } = useAuth();
+  const { user, loading, refreshUser } = useAuth();
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState("bookings");
+
+  // Check URL params for tab on mount
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab && ["bookings", "saved", "info", "settings"].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [fetchingBookings, setFetchingBookings] = useState(false);
+  const [bookmarkedProviders, setBookmarkedProviders] = useState<BookmarkedProvider[]>([]);
+  const [fetchingBookmarks, setFetchingBookmarks] = useState(false);
   const [editingProfile, setEditingProfile] = useState(false);
   const [profileData, setProfileData] = useState({
     fullName: user?.fullName || "",
@@ -68,8 +106,24 @@ export default function Dashboard() {
       } else {
         setAvatar(null);
       }
+      // Initialize profile data with user data
+      setProfileData({
+        fullName: user.fullName || "",
+        email: user.email || "",
+        phone: user.phone || "",
+        address: user.address || "",
+        city: user.city || "",
+        district: user.district || "",
+      });
     }
   }, [user]);
+
+  // Fetch bookmarks when "saved" tab is active
+  useEffect(() => {
+    if (user && activeTab === "saved") {
+      fetchBookmarkedProviders();
+    }
+  }, [user, activeTab]);
 
   const fetchBookings = async () => {
     try {
@@ -80,6 +134,45 @@ export default function Dashboard() {
       console.error("Failed to fetch bookings:", err);
     } finally {
       setFetchingBookings(false);
+    }
+  };
+
+  const fetchBookmarkedProviders = async () => {
+    try {
+      setFetchingBookmarks(true);
+      const bookmarks = await getBookmarks();
+      setBookmarkedProviders(bookmarks.map((b) => b.provider!).filter(Boolean));
+    } catch (err) {
+      console.error("Failed to fetch bookmarks:", err);
+    } finally {
+      setFetchingBookmarks(false);
+    }
+  };
+
+  const handleRemoveBookmark = async (providerId: string) => {
+    try {
+      await removeBookmark(providerId);
+      setBookmarkedProviders((prev) => prev.filter((p) => p.id !== providerId));
+      toast.success("Хадгалгаас хасагдлаа");
+    } catch (err: any) {
+      console.error("Failed to remove bookmark:", err);
+      toast.error(err.response?.data?.msg || "Алдаа гарлаа");
+    }
+  };
+
+  const handleCancelBooking = async (bookingId: string) => {
+    if (!confirm("Та энэ захиалгыг цуцлахдаа итгэлтэй байна уу?")) {
+      return;
+    }
+
+    try {
+      await api.post(`/bookings/${bookingId}/cancel`);
+      toast.success("Захиалга амжилттай цуцлагдлаа");
+      // Refresh bookings
+      fetchBookings();
+    } catch (err: any) {
+      console.error("Failed to cancel booking:", err);
+      toast.error(err.response?.data?.msg || "Алдаа гарлаа");
     }
   };
 
@@ -112,6 +205,28 @@ export default function Dashboard() {
       } finally {
         setUploadingAvatar(false);
       }
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    try {
+      // Update all profile fields
+      await api.put("/auth/profile", {
+        fullName: profileData.fullName,
+        phone: profileData.phone,
+        address: profileData.address,
+        city: profileData.city,
+        district: profileData.district,
+      });
+
+      // Refresh user data from server
+      await refreshUser();
+
+      setEditingProfile(false);
+      alert("Мэдээлэл амжилттай шинэчлэгдлээ!");
+    } catch (err: any) {
+      console.error("Failed to update profile:", err);
+      alert(err.response?.data?.msg || "Алдаа гарлаа. Дахин оролдоно уу.");
     }
   };
 
@@ -180,6 +295,18 @@ export default function Dashboard() {
             >
               <Calendar className="w-5 h-5" />
               <span className="font-medium">Миний захиалгууд</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab("saved")}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                activeTab === "saved"
+                  ? "bg-indigo-50 text-indigo-600"
+                  : "text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              <Heart className="w-5 h-5" />
+              <span className="font-medium">Хадгалсан</span>
             </button>
 
             <button
@@ -283,12 +410,20 @@ export default function Dashboard() {
                             </div>
                           </div>
 
-                          <button
-                            onClick={() => setSelectedBooking(booking)}
-                            className="w-full mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-                          >
-                            Дэлгэрэнгүй
-                          </button>
+                          <div className="flex gap-2 mt-4">
+                            <button
+                              onClick={() => setSelectedBooking(booking)}
+                              className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                            >
+                              Дэлгэрэнгүй
+                            </button>
+                            <button
+                              onClick={() => handleCancelBooking(booking.id)}
+                              className="px-4 py-2 border-2 border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors font-medium"
+                            >
+                              Цуцлах
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -351,6 +486,128 @@ export default function Dashboard() {
                     </div>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* SAVED PROVIDERS TAB */}
+            {activeTab === "saved" && (
+              <div className="space-y-8">
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900 mb-2">Хадгалсан бизнесүүд</h1>
+                  <p className="text-gray-600">Таны хадгалсан дуртай бизнесүүд</p>
+                </div>
+
+                {fetchingBookmarks ? (
+                  <div className="flex items-center justify-center py-12">
+                    <p className="text-gray-600">Уншиж байна...</p>
+                  </div>
+                ) : bookmarkedProviders.length === 0 ? (
+                  <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+                    <Heart className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">
+                      Хадгалсан бизнес байхгүй байна
+                    </h3>
+                    <p className="text-gray-600 mb-6">
+                      Дуртай бизнесүүдээ хадгалаад хурдан олоорой
+                    </p>
+                    <Link
+                      to="/providers"
+                      className="inline-block px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+                    >
+                      Бизнес хайх →
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {bookmarkedProviders.map((provider) => (
+                      <div
+                        key={provider.id}
+                        className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow"
+                      >
+                        {/* Provider Header */}
+                        <div className="p-6">
+                          <div className="flex items-start gap-4 mb-4">
+                            {provider.user.avatarUrl ? (
+                              <img
+                                src={provider.user.avatarUrl}
+                                alt={provider.nickname}
+                                className="w-16 h-16 rounded-xl object-cover border-2 border-indigo-600"
+                              />
+                            ) : (
+                              <div className="w-16 h-16 bg-indigo-100 rounded-xl flex items-center justify-center">
+                                <Building2 className="w-8 h-8 text-indigo-600" />
+                              </div>
+                            )}
+
+                            <div className="flex-1 min-w-0">
+                              <h3 className="text-lg font-bold text-gray-900 truncate">
+                                {provider.nickname}
+                              </h3>
+                              <p className="text-sm text-gray-600 truncate">
+                                {provider.businessName}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Services */}
+                          <div className="mb-4">
+                            <p className="text-sm font-medium text-gray-700 mb-2">
+                              Үйлчилгээ: {provider.services.length}
+                            </p>
+                            {provider.services.slice(0, 2).map((service) => (
+                              <div
+                                key={service.id}
+                                className="flex justify-between items-center text-sm py-1"
+                              >
+                                <span className="text-gray-600 truncate">{service.name}</span>
+                                <span className="text-indigo-600 font-semibold ml-2">
+                                  {service.price.toLocaleString()}₮
+                                </span>
+                              </div>
+                            ))}
+                            {provider.services.length > 2 && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                +{provider.services.length - 2} бусад үйлчилгээ
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Contact Info */}
+                          <div className="space-y-1 text-sm text-gray-600 mb-4">
+                            {provider.phone && (
+                              <div className="flex items-center gap-2">
+                                <Phone className="w-4 h-4" />
+                                <span className="truncate">{provider.phone}</span>
+                              </div>
+                            )}
+                            {provider.address && (
+                              <div className="flex items-center gap-2">
+                                <MapPin className="w-4 h-4" />
+                                <span className="truncate">{provider.address}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex gap-2">
+                            <Link
+                              to={`/providers/${provider.id}`}
+                              className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-center font-medium"
+                            >
+                              Үзэх
+                            </Link>
+                            <button
+                              onClick={() => handleRemoveBookmark(provider.id)}
+                              className="px-4 py-2 border-2 border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                            >
+                              <Heart className="w-5 h-5 fill-current" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -436,15 +693,37 @@ export default function Dashboard() {
                           Хот/Аймаг
                         </label>
                         {editingProfile ? (
-                          <input
-                            type="text"
+                          <select
                             value={profileData.city}
                             onChange={(e) =>
                               setProfileData({ ...profileData, city: e.target.value })
                             }
-                            placeholder="Улаанбаатар"
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                          />
+                          >
+                            <option value=""></option>
+                            <option value="Улаанбаатар">Улаанбаатар</option>
+                            <option value="Архангай">Архангай</option>
+                            <option value="Баян-Өлгий">Баян-Өлгий</option>
+                            <option value="Баянхонгор">Баянхонгор</option>
+                            <option value="Булган">Булган</option>
+                            <option value="Говь-Алтай">Говь-Алтай</option>
+                            <option value="Говьсүмбэр">Говьсүмбэр</option>
+                            <option value="Дархан-Уул">Дархан-Уул</option>
+                            <option value="Дорноговь">Дорноговь</option>
+                            <option value="Дорнод">Дорнод</option>
+                            <option value="Дундговь">Дундговь</option>
+                            <option value="Завхан">Завхан</option>
+                            <option value="Орхон">Орхон</option>
+                            <option value="Өвөрхангай">Өвөрхангай</option>
+                            <option value="Өмнөговь">Өмнөговь</option>
+                            <option value="Сүхбаатар">Сүхбаатар</option>
+                            <option value="Сэлэнгэ">Сэлэнгэ</option>
+                            <option value="Төв">Төв</option>
+                            <option value="Увс">Увс</option>
+                            <option value="Ховд">Ховд</option>
+                            <option value="Хөвсгөл">Хөвсгөл</option>
+                            <option value="Хэнтий">Хэнтий</option>
+                          </select>
                         ) : (
                           <p className="text-gray-900 font-medium flex items-center gap-2">
                             <MapPin className="w-4 h-4 text-gray-600" />
@@ -459,15 +738,25 @@ export default function Dashboard() {
                           Дүүрэг
                         </label>
                         {editingProfile ? (
-                          <input
-                            type="text"
+                          <select
                             value={profileData.district}
                             onChange={(e) =>
                               setProfileData({ ...profileData, district: e.target.value })
                             }
-                            placeholder="Сүхбаатар"
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                          />
+                          >
+                            <option value=""></option>
+                            <option value="Багануур">Багануур</option>
+                            <option value="Багахангай">Багахангай</option>
+                            <option value="Баянгол">Баянгол</option>
+                            <option value="Баянзүрх">Баянзүрх</option>
+                            <option value="Налайх">Налайх</option>
+                            <option value="Сонгинохайрхан">Сонгинохайрхан</option>
+                            <option value="Сүхбаатар">Сүхбаатар</option>
+                            <option value="Хан-Уул">Хан-Уул</option>
+                            <option value="Чингэлтэй">Чингэлтэй</option>
+                            <option value="Хөдөө орон нутаг">Хөдөө орон нутаг</option>
+                          </select>
                         ) : (
                           <p className="text-gray-900 font-medium">
                             {profileData.district || "хоосон"}
@@ -503,7 +792,7 @@ export default function Dashboard() {
                       {editingProfile ? (
                         <>
                           <button
-                            onClick={() => setEditingProfile(false)}
+                            onClick={handleSaveProfile}
                             className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
                           >
                             Хадгалах
@@ -551,44 +840,54 @@ export default function Dashboard() {
                   {/* Password Change */}
                   <div className="bg-white rounded-xl border border-gray-200 p-6">
                     <h3 className="text-lg font-bold text-gray-900 mb-4">Нууц үг өөрчлөх</h3>
-                    <div className="max-w-md space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Одоогийн нууц үг
-                        </label>
-                        <input
-                          type="password"
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                          placeholder="••••••••"
-                        />
+                    {user?.provider === 'GOOGLE' ? (
+                      <div className="max-w-md">
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                          <p className="text-blue-800 text-sm">
+                            Та Google-ээр нэвтэрсэн байна. Нууц үгийн удирдлагыг Google аккаунтаас хийнэ үү.
+                          </p>
+                        </div>
                       </div>
+                    ) : (
+                      <div className="max-w-md space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Одоогийн нууц үг
+                          </label>
+                          <input
+                            type="password"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            placeholder="••••••••"
+                          />
+                        </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Шинэ нууц үг
-                        </label>
-                        <input
-                          type="password"
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                          placeholder="••••••••"
-                        />
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Шинэ нууц үг
+                          </label>
+                          <input
+                            type="password"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            placeholder="••••••••"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Нууц үгийг дахин оруулах
+                          </label>
+                          <input
+                            type="password"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            placeholder="••••••••"
+                          />
+                        </div>
+
+                        <button className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium">
+                          Нууц үг өөрчлөх
+                        </button>
                       </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Нууц үгийг дахин оруулах
-                        </label>
-                        <input
-                          type="password"
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                          placeholder="••••••••"
-                        />
-                      </div>
-
-                      <button className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium">
-                        Нууц үг өөрчлөх
-                      </button>
-                    </div>
+                    )}
                   </div>
 
                   {/* Notifications */}
@@ -666,10 +965,20 @@ export default function Dashboard() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-gray-600">Статус</span>
-                    <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
-                      Баталгаажсан
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                      selectedBooking.status === "CANCELLED"
+                        ? "bg-red-100 text-red-700"
+                        : "bg-blue-100 text-blue-700"
+                    }`}>
+                      {selectedBooking.status === "CANCELLED" ? "Цуцлагдсан" : "Баталгаажсан"}
                     </span>
                   </div>
+                  {selectedBooking.cancellationReason && (
+                    <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="text-xs font-semibold text-red-900 mb-1">Цуцалсан шалтгаан:</p>
+                      <p className="text-sm text-red-800">{selectedBooking.cancellationReason}</p>
+                    </div>
+                  )}
                 </div>
               </div>
 

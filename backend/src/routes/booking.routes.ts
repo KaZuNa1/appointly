@@ -2,6 +2,7 @@ import { Router, Response } from "express";
 import { authMiddleware } from "../middleware/auth.middleware";
 import { prisma } from "../config/db";
 import { logBookingAction } from "../utils/audit";
+import { createNotification } from "../controllers/notification.controller";
 
 const router = Router();
 
@@ -156,6 +157,46 @@ router.post("/", authMiddleware, async (req: any, res: Response) => {
       serviceName: appointment.service.name,
     });
 
+    // Get customer info for provider notification
+    const customer = await prisma.user.findUnique({
+      where: { id: customerId },
+      select: { fullName: true, phone: true },
+    });
+
+    // Create notifications
+    try {
+      const formattedDate = new Date(appointmentDate).toLocaleString('mn-MN', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
+      // Notification for customer
+      await createNotification({
+        userId: customerId,
+        type: "BOOKING_CONFIRMED",
+        title: "Цаг захиалга амжилттай!",
+        message: `Таны ${appointment.service.name} үйлчилгээний цаг амжилттай захиалагдлаа.\n\nБизнес: ${appointment.provider.businessName}\nОгноо: ${formattedDate}\n\nБид таныг хүлээж байна!`,
+        bookingId: appointment.id,
+        providerId: appointment.providerId,
+      });
+
+      // Notification for provider
+      await createNotification({
+        userId: appointment.provider.userId,
+        type: "NEW_BOOKING",
+        title: "Шинэ захиалга ирлээ!",
+        message: `${customer?.fullName || "Хэрэглэгч"} таны ${appointment.service.name} үйлчилгээг захиаллаа.\n\nОгноо: ${formattedDate}\n${customer?.phone ? `Утас: ${customer.phone}` : ""}\n${notes ? `\nТэмдэглэл: ${notes}` : ""}`,
+        bookingId: appointment.id,
+        providerId: appointment.providerId,
+      });
+    } catch (notifError) {
+      console.error("Failed to create notification:", notifError);
+      // Don't fail the booking if notification fails
+    }
+
     return res.status(201).json({
       msg: "Tsag amjilttай zaхialagudsaa",
       appointment,
@@ -245,22 +286,102 @@ router.patch("/:id/status", authMiddleware, async (req: any, res: Response) => {
       return res.status(400).json({ msg: "Buruу status" });
     }
 
+    // Get full appointment details before update
+    const oldAppointment = await prisma.appointment.findUnique({
+      where: { id },
+      include: {
+        service: true,
+        provider: {
+          include: {
+            user: { select: { id: true } },
+          },
+        },
+        customer: {
+          select: { id: true, fullName: true },
+        },
+      },
+    });
+
+    if (!oldAppointment) {
+      return res.status(404).json({ msg: "Захиалга олдсонгүй" });
+    }
+
     const appointment = await prisma.appointment.update({
       where: { id },
       data: { status },
+      include: {
+        service: true,
+        provider: true,
+        customer: { select: { fullName: true } },
+      },
     });
+
+    const formattedDate = new Date(appointment.appointmentTime).toLocaleString('mn-MN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    // Determine who initiated the action (provider or customer)
+    const isProvider = userId === oldAppointment.provider.user.id;
+    const isCustomer = userId === oldAppointment.customer.id;
 
     // Log status change
     if (status === "CANCELLED") {
       await logBookingAction(userId, "BOOKING_CANCELLED", id, {
-        previousStatus: appointment.status,
+        previousStatus: oldAppointment.status,
         newStatus: status
       });
+
+      // Send notification to the OTHER party
+      try {
+        if (isProvider) {
+          // Provider cancelled -> notify customer
+          await createNotification({
+            userId: oldAppointment.customer.id,
+            type: "BOOKING_CANCELLED",
+            title: "Цаг захиалга цуцлагдлаа",
+            message: `Таны ${appointment.service.name} үйлчилгээний цаг цуцлагдлаа.\n\nБизнес: ${appointment.provider.businessName}\nОгноо: ${formattedDate}\n\nУучлаарай, та өөр цаг сонгоно уу.`,
+            bookingId: id,
+            providerId: appointment.providerId,
+          });
+        } else if (isCustomer) {
+          // Customer cancelled -> notify provider
+          await createNotification({
+            userId: oldAppointment.provider.user.id,
+            type: "BOOKING_CANCELLED_BY_CUSTOMER",
+            title: "Захиалга цуцлагдлаа",
+            message: `${oldAppointment.customer.fullName} өөрийн ${appointment.service.name} үйлчилгээний цагийг цуцаллаа.\n\nОгноо: ${formattedDate}`,
+            bookingId: id,
+            providerId: appointment.providerId,
+          });
+        }
+      } catch (notifError) {
+        console.error("Failed to create cancellation notification:", notifError);
+      }
     } else if (status === "CONFIRMED") {
       await logBookingAction(userId, "BOOKING_CONFIRMED", id, {
-        previousStatus: appointment.status,
+        previousStatus: oldAppointment.status,
         newStatus: status
       });
+
+      // Provider confirmed -> notify customer
+      if (isProvider) {
+        try {
+          await createNotification({
+            userId: oldAppointment.customer.id,
+            type: "BOOKING_APPROVED",
+            title: "Цаг баталгаажлаа!",
+            message: `Таны ${appointment.service.name} үйлчилгээний цаг баталгаажлаа!\n\nБизнес: ${appointment.provider.businessName}\nОгноо: ${formattedDate}\n\nБид таныг хүлээж байна!`,
+            bookingId: id,
+            providerId: appointment.providerId,
+          });
+        } catch (notifError) {
+          console.error("Failed to create confirmation notification:", notifError);
+        }
+      }
     }
 
     return res.json({
@@ -269,6 +390,196 @@ router.patch("/:id/status", authMiddleware, async (req: any, res: Response) => {
     });
   } catch (err) {
     console.error("UPDATE BOOKING STATUS ERROR:", err);
+    return res.status(500).json({ msg: "Server aldaa garlaa." });
+  }
+});
+
+// POST /api/bookings/:id/cancel - Customer cancels booking (with policy check)
+router.post("/:id/cancel", authMiddleware, async (req: any, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    // Get appointment with provider details
+    const appointment = await prisma.appointment.findUnique({
+      where: { id },
+      include: {
+        service: true,
+        provider: {
+          select: {
+            businessName: true,
+            cancellationHours: true,
+            userId: true,
+          },
+        },
+        customer: {
+          select: { id: true, fullName: true },
+        },
+      },
+    });
+
+    if (!appointment) {
+      return res.status(404).json({ msg: "Захиалга олдсонгүй" });
+    }
+
+    // Verify this is the customer's booking
+    if (appointment.customerId !== userId) {
+      return res.status(403).json({ msg: "Танд энэ үйлдлийг хийх эрх байхгүй" });
+    }
+
+    // Check if already cancelled
+    if (appointment.status === "CANCELLED") {
+      return res.status(400).json({ msg: "Энэ захиалга аль хэдийн цуцлагдсан байна" });
+    }
+
+    // Check cancellation policy
+    const now = new Date();
+    const appointmentTime = new Date(appointment.appointmentTime);
+    const hoursUntilAppointment = (appointmentTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+    if (hoursUntilAppointment < appointment.provider.cancellationHours) {
+      return res.status(400).json({
+        msg: `Уучлаарай, цаг захиалгаас ${appointment.provider.cancellationHours} цагийн өмнө л цуцлах боломжтой. Та одоо цуцлах боломжгүй байна.`,
+      });
+    }
+
+    // Cancel the appointment
+    const updatedAppointment = await prisma.appointment.update({
+      where: { id },
+      data: { status: "CANCELLED" },
+      include: {
+        service: true,
+        provider: true,
+      },
+    });
+
+    // Log cancellation
+    await logBookingAction(userId, "BOOKING_CANCELLED", id, {
+      previousStatus: appointment.status,
+      reason: "Customer cancelled",
+    });
+
+    // Notify provider
+    try {
+      const formattedDate = new Date(appointment.appointmentTime).toLocaleString('mn-MN', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
+      await createNotification({
+        userId: appointment.provider.userId,
+        type: "BOOKING_CANCELLED_BY_CUSTOMER",
+        title: "Захиалга цуцлагдлаа",
+        message: `${appointment.customer.fullName} өөрийн ${appointment.service.name} үйлчилгээний цагийг цуцаллаа.\n\nОгноо: ${formattedDate}`,
+        bookingId: id,
+        providerId: appointment.providerId,
+      });
+    } catch (notifError) {
+      console.error("Failed to create cancellation notification:", notifError);
+    }
+
+    return res.json({
+      msg: "Цаг амжилттай цуцлагдлаа",
+      appointment: updatedAppointment,
+    });
+  } catch (err) {
+    console.error("CANCEL BOOKING ERROR:", err);
+    return res.status(500).json({ msg: "Server aldaa garlaa." });
+  }
+});
+
+// POST /api/bookings/:id/provider-cancel - Provider cancels booking with reason
+router.post("/:id/provider-cancel", authMiddleware, async (req: any, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const userId = req.user.id;
+
+    if (!reason || reason.trim() === "") {
+      return res.status(400).json({ msg: "Цуцлах шалтгаанаа оруулна уу" });
+    }
+
+    // Get appointment
+    const appointment = await prisma.appointment.findUnique({
+      where: { id },
+      include: {
+        service: true,
+        provider: {
+          select: {
+            userId: true,
+            businessName: true,
+          },
+        },
+        customer: {
+          select: { id: true, fullName: true },
+        },
+      },
+    });
+
+    if (!appointment) {
+      return res.status(404).json({ msg: "Захиалга олдсонгүй" });
+    }
+
+    // Verify this is the provider's booking
+    if (appointment.provider.userId !== userId) {
+      return res.status(403).json({ msg: "Танд энэ үйлдлийг хийх эрх байхгүй" });
+    }
+
+    // Check if already cancelled
+    if (appointment.status === "CANCELLED") {
+      return res.status(400).json({ msg: "Энэ захиалга аль хэдийн цуцлагдсан байна" });
+    }
+
+    // Cancel the appointment with reason
+    const updatedAppointment = await prisma.appointment.update({
+      where: { id },
+      data: {
+        status: "CANCELLED",
+        cancellationReason: reason,
+      },
+      include: {
+        service: true,
+        provider: true,
+      },
+    });
+
+    // Log cancellation
+    await logBookingAction(userId, "BOOKING_CANCELLED_BY_PROVIDER", id, {
+      previousStatus: appointment.status,
+      reason: reason,
+    });
+
+    // Notify customer with cancellation reason
+    try {
+      const formattedDate = new Date(appointment.appointmentTime).toLocaleString('mn-MN', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
+      await createNotification({
+        userId: appointment.customer.id,
+        type: "BOOKING_CANCELLED",
+        title: "Цаг захиалга цуцлагдлаа",
+        message: `Таны ${appointment.service.name} үйлчилгээний цаг цуцлагдлаа.\n\nБизнес: ${appointment.provider.businessName}\nОгноо: ${formattedDate}\n\nШалтгаан: ${reason}\n\nУучлаарай, та өөр цаг сонгоно уу.`,
+        bookingId: id,
+        providerId: appointment.providerId,
+      });
+    } catch (notifError) {
+      console.error("Failed to create cancellation notification:", notifError);
+    }
+
+    return res.json({
+      msg: "Цаг амжилттай цуцлагдлаа",
+      appointment: updatedAppointment,
+    });
+  } catch (err) {
+    console.error("PROVIDER CANCEL BOOKING ERROR:", err);
     return res.status(500).json({ msg: "Server aldaa garlaa." });
   }
 });

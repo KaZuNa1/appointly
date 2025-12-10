@@ -1,15 +1,18 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, User, LogOut, LayoutDashboard } from "lucide-react";
+import { Menu, X, User, LogOut, LayoutDashboard, Calendar, Settings, HelpCircle, Clock, Scissors, Info, Bell, Shield } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { logout } from "@/lib/auth";
+import { useUnreadNotifications } from "@/hooks/useNotifications";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const { user, loading } = useAuth();
   const [avatar, setAvatar] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const { unreadCount } = useUnreadNotifications();
 
   useEffect(() => {
     // Load avatar from user object (Supabase Storage URL)
@@ -60,19 +63,37 @@ export default function Navbar() {
 
         {/* DESKTOP MENU */}
         <div className="hidden md:flex items-center space-x-8">
-          <Link to="/" className="text-gray-700 hover:text-indigo-600 transition">
-            Нүүр
-          </Link>
-
-          {!user || user.role !== "PROVIDER" ? (
-            <Link to="/services" className="text-gray-700 hover:text-indigo-600 transition">
-              Үйлчилгээнүүд
+          {/* ADMIN - Only show Admin Dashboard link */}
+          {user?.role === "ADMIN" ? (
+            <Link to="/admin" className="text-gray-700 hover:text-indigo-600 transition font-semibold">
+              Админ самбар
             </Link>
-          ) : null}
+          ) : (
+            // NON-ADMIN users see regular navigation
+            <>
+              <Link to="/" className="text-gray-700 hover:text-indigo-600 transition">
+                Нүүр
+              </Link>
 
-          <Link to="/providers" className="text-gray-700 hover:text-indigo-600 transition">
-            Бизнесүүд
-          </Link>
+              {user?.role === "PROVIDER" ? (
+                <Link to="/provider/dashboard" className="text-gray-700 hover:text-indigo-600 transition">
+                  Хяналтын самбар
+                </Link>
+              ) : null}
+
+              {!user || user.role !== "PROVIDER" ? (
+                <Link to="/services" className="text-gray-700 hover:text-indigo-600 transition">
+                  Үйлчилгээнүүд
+                </Link>
+              ) : null}
+
+              {!user || user.role !== "PROVIDER" ? (
+                <Link to="/providers" className="text-gray-700 hover:text-indigo-600 transition">
+                  Бизнесүүд
+                </Link>
+              ) : null}
+            </>
+          )}
         </div>
 
         {/* DESKTOP AUTH BUTTONS */}
@@ -80,8 +101,23 @@ export default function Navbar() {
           {loading ? (
             <div className="text-gray-500">Уншиж байна...</div>
           ) : user ? (
-            // Logged in - Show profile dropdown
-            <div className="relative">
+            // Logged in - Show notification bell and profile dropdown
+            <>
+              {/* Notification Bell Icon - Hidden for ADMIN */}
+              {user.role !== "ADMIN" && (
+                <Link
+                  to="/inbox"
+                  className="relative p-2 rounded-lg transition hover:bg-gray-100"
+                >
+                  <Bell className="w-5 h-5 text-gray-700" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                  )}
+                </Link>
+              )}
+
+              {/* User Profile Dropdown */}
+              <div className="relative">
               <button
                 onClick={() => setProfileOpen(!profileOpen)}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg transition hover:bg-gray-100"
@@ -95,43 +131,167 @@ export default function Navbar() {
                 ) : (
                   <User className="w-5 h-5" />
                 )}
-                <span className="font-medium">{user.fullName}</span>
+                <span className="font-medium">
+                  {user.role === "PROVIDER" && user.providerProfile?.nickname
+                    ? user.providerProfile.nickname
+                    : user.fullName}
+                </span>
                 {user.role === "PROVIDER" && (
                   <span className="px-2 py-0.5 bg-purple-600 text-white text-xs rounded font-medium">
                     бизнес
+                  </span>
+                )}
+                {user.role === "ADMIN" && (
+                  <span className="px-2 py-0.5 bg-red-600 text-white text-xs rounded font-medium">
+                    админ
                   </span>
                 )}
               </button>
 
               {profileOpen && (
                 <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                  <div className="px-4 py-2 border-b border-gray-100">
-                    <p className="text-sm font-semibold text-gray-900">{user.fullName}</p>
-                    <p className="text-xs text-gray-500">{user.email}</p>
-                  </div>
+                  {user.role === "ADMIN" ? (
+                    // Admin menu items
+                    <>
+                      <Link
+                        to="/admin"
+                        onClick={() => setProfileOpen(false)}
+                        className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 transition"
+                      >
+                        <Shield className="w-4 h-4" />
+                        <span>Админ самбар</span>
+                      </Link>
 
-                  <Link
-                    to={getDashboardLink()}
-                    onClick={() => setProfileOpen(false)}
-                    className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 transition"
-                  >
-                    <LayoutDashboard className="w-4 h-4" />
-                    <span>Хяналтын самбар</span>
-                  </Link>
+                      <div className="border-t border-gray-100 my-1"></div>
 
-                  <button
-                    onClick={() => {
-                      setProfileOpen(false);
-                      handleLogout();
-                    }}
-                    className="w-full flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 transition"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    <span>Гарах</span>
-                  </button>
+                      <button
+                        onClick={() => {
+                          setProfileOpen(false);
+                          handleLogout();
+                        }}
+                        className="w-full flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 transition"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span>Гарах</span>
+                      </button>
+                    </>
+                  ) : user.role === "CUSTOMER" ? (
+                    // Customer menu items
+                    <>
+                      <Link
+                        to={`${getDashboardLink()}?tab=bookings`}
+                        onClick={() => setProfileOpen(false)}
+                        className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 transition"
+                      >
+                        <Calendar className="w-4 h-4" />
+                        <span>Миний цаг захиалга</span>
+                      </Link>
+
+                      <Link
+                        to={`${getDashboardLink()}?tab=info`}
+                        onClick={() => setProfileOpen(false)}
+                        className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 transition"
+                      >
+                        <Info className="w-4 h-4" />
+                        <span>Хувийн мэдээлэл</span>
+                      </Link>
+
+                      <Link
+                        to={`${getDashboardLink()}?tab=settings`}
+                        onClick={() => setProfileOpen(false)}
+                        className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 transition"
+                      >
+                        <Settings className="w-4 h-4" />
+                        <span>Тохиргоо</span>
+                      </Link>
+
+                      <div className="border-t border-gray-100 my-1"></div>
+
+                      <button
+                        onClick={() => {
+                          setProfileOpen(false);
+                          handleLogout();
+                        }}
+                        className="w-full flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 transition"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span>Гарах</span>
+                      </button>
+                    </>
+                  ) : (
+                    // Provider menu items - all sidebar options
+                    <>
+                      <button
+                        onClick={() => {
+                          setProfileOpen(false);
+                          navigate("/provider/dashboard?tab=schedule");
+                        }}
+                        className="w-full flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 transition"
+                      >
+                        <Clock className="w-4 h-4" />
+                        <span>Цагийн хуваарь</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setProfileOpen(false);
+                          navigate("/provider/dashboard?tab=services");
+                        }}
+                        className="w-full flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 transition"
+                      >
+                        <Scissors className="w-4 h-4" />
+                        <span>Үйлчилгээ</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setProfileOpen(false);
+                          navigate("/provider/dashboard?tab=info");
+                        }}
+                        className="w-full flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 transition"
+                      >
+                        <Info className="w-4 h-4" />
+                        <span>Мэдээлэл</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setProfileOpen(false);
+                          navigate("/provider/dashboard?tab=settings");
+                        }}
+                        className="w-full flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 transition"
+                      >
+                        <Settings className="w-4 h-4" />
+                        <span>Тохиргоо</span>
+                      </button>
+
+                      <div className="border-t border-gray-100 my-1"></div>
+
+                      <Link
+                        to="/help"
+                        onClick={() => setProfileOpen(false)}
+                        className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 transition"
+                      >
+                        <HelpCircle className="w-4 h-4" />
+                        <span>Тусламж</span>
+                      </Link>
+
+                      <button
+                        onClick={() => {
+                          setProfileOpen(false);
+                          handleLogout();
+                        }}
+                        className="w-full flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 transition"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span>Гарах</span>
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
-            </div>
+              </div>
+            </>
           ) : (
             // Logged out - Show login/register buttons
             <>
@@ -154,31 +314,47 @@ export default function Navbar() {
       {/* MOBILE DROPDOWN MENU */}
       {open && (
         <div className="md:hidden px-6 pb-6 space-y-4 animate-slide-down">
-          <Link
-            to="/"
-            onClick={() => setOpen(false)}
-            className="block text-gray-700 hover:text-indigo-600"
-          >
-            Нүүр
-          </Link>
-
-          {!user || user.role !== "PROVIDER" ? (
+          {/* ADMIN - Only show Admin Dashboard */}
+          {user?.role === "ADMIN" ? (
             <Link
-              to="/services"
+              to="/admin"
               onClick={() => setOpen(false)}
-              className="block text-gray-700 hover:text-indigo-600"
+              className="block text-gray-700 hover:text-indigo-600 font-semibold"
             >
-              Үйлчилгээнүүд
+              Админ самбар
             </Link>
-          ) : null}
+          ) : (
+            // NON-ADMIN users see regular navigation
+            <>
+              <Link
+                to="/"
+                onClick={() => setOpen(false)}
+                className="block text-gray-700 hover:text-indigo-600"
+              >
+                Нүүр
+              </Link>
 
-          <Link
-            to="/providers"
-            onClick={() => setOpen(false)}
-            className="block text-gray-700 hover:text-indigo-600"
-          >
-            Бизнесүүд
-          </Link>
+              {!user || user.role !== "PROVIDER" ? (
+                <Link
+                  to="/services"
+                  onClick={() => setOpen(false)}
+                  className="block text-gray-700 hover:text-indigo-600"
+                >
+                  Үйлчилгээнүүд
+                </Link>
+              ) : null}
+
+              {!user || user.role !== "PROVIDER" ? (
+                <Link
+                  to="/providers"
+                  onClick={() => setOpen(false)}
+                  className="block text-gray-700 hover:text-indigo-600"
+                >
+                  Бизнесүүд
+                </Link>
+              ) : null}
+            </>
+          )}
 
           {/* MOBILE AUTH SECTION */}
           {loading ? (
@@ -198,16 +374,42 @@ export default function Navbar() {
                 )}
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold text-gray-900">{user.fullName}</p>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {user.role === "PROVIDER" && user.providerProfile?.nickname
+                        ? user.providerProfile.nickname
+                        : user.fullName}
+                    </p>
                     {user.role === "PROVIDER" && (
                       <span className="px-2 py-0.5 bg-purple-600 text-white text-xs rounded font-medium">
                         бизнес
+                      </span>
+                    )}
+                    {user.role === "ADMIN" && (
+                      <span className="px-2 py-0.5 bg-red-600 text-white text-xs rounded font-medium">
+                        админ
                       </span>
                     )}
                   </div>
                   <p className="text-xs text-gray-500">{user.email}</p>
                 </div>
               </div>
+
+              {/* Inbox - Hidden for ADMIN */}
+              {user.role !== "ADMIN" && (
+                <Link
+                  to="/inbox"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-lg relative"
+                >
+                  <Bell className="w-4 h-4" />
+                  <span>Мэдэгдэл</span>
+                  {unreadCount > 0 && (
+                    <span className="ml-auto px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">
+                      {unreadCount}
+                    </span>
+                  )}
+                </Link>
+              )}
 
               <Link
                 to={getDashboardLink()}

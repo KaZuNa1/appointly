@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 interface Props {
   providerData: any;
@@ -8,43 +9,32 @@ interface Props {
 }
 
 export default function SettingsTab({ providerData, onRefresh }: Props) {
-  const [emailForm, setEmailForm] = useState({
-    newEmail: providerData?.email || "",
-  });
-
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
 
-  const [loadingEmail, setLoadingEmail] = useState(false);
   const [loadingPassword, setLoadingPassword] = useState(false);
 
-  // Update Email
-  const handleEmailUpdate = async () => {
-    if (!emailForm.newEmail) {
-      alert("Шинэ имэйл хаягаа оруулна уу");
-      return;
-    }
+  // Booking Configuration
+  const [slotInterval, setSlotInterval] = useState<number>(30);
+  const [bookingWindowWeeks, setBookingWindowWeeks] = useState<number>(1);
+  const [cancellationHours, setCancellationHours] = useState<number>(24);
+  const [loadingBookingConfig, setLoadingBookingConfig] = useState(false);
 
-    if (emailForm.newEmail === providerData?.email) {
-      alert("Шинэ имэйл хуучин имэйлтэй ижил байна");
-      return;
+  // Sync state with providerData when it changes
+  useEffect(() => {
+    if (providerData?.providerProfile?.slotInterval) {
+      setSlotInterval(providerData.providerProfile.slotInterval);
     }
-
-    try {
-      setLoadingEmail(true);
-      await api.put("/auth/email", { email: emailForm.newEmail });
-      alert("Имэйл хаяг амжилттай солигдлоо!");
-      onRefresh();
-    } catch (err: any) {
-      console.error("Email update error:", err);
-      alert(err?.response?.data?.msg || "Имэйл солихад алдаа гарлаа");
-    } finally {
-      setLoadingEmail(false);
+    if (providerData?.providerProfile?.bookingWindowWeeks) {
+      setBookingWindowWeeks(providerData.providerProfile.bookingWindowWeeks);
     }
-  };
+    if (providerData?.providerProfile?.cancellationHours !== undefined) {
+      setCancellationHours(providerData.providerProfile.cancellationHours);
+    }
+  }, [providerData]);
 
   // Update Password
   const handlePasswordUpdate = async () => {
@@ -86,46 +76,126 @@ export default function SettingsTab({ providerData, onRefresh }: Props) {
     }
   };
 
+  // Update Booking Configuration
+  const handleBookingConfigUpdate = async () => {
+    try {
+      setLoadingBookingConfig(true);
+      const providerId = providerData?.providerProfile?.id;
+
+      if (!providerId) {
+        toast.error("Бизнес профайл олдсонгүй");
+        return;
+      }
+
+      await api.put(`/providers/${providerId}`, {
+        slotInterval,
+        bookingWindowWeeks,
+        cancellationHours,
+      });
+      toast.success("Захиалгын тохиргоо амжилттай шинэчлэгдлээ!");
+      onRefresh();
+    } catch (err: any) {
+      console.error("Booking config update error:", err);
+      toast.error(err?.response?.data?.msg || "Тохиргоо шинэчлэхэд алдаа гарлаа");
+    } finally {
+      setLoadingBookingConfig(false);
+    }
+  };
+
   return (
     <div>
       <h1 className="text-3xl font-bold text-gray-900 mb-6">Тохиргоо</h1>
 
       <div className="space-y-6">
-        {/* Email Settings */}
+        {/* Booking Configuration */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Имэйл хаяг солих</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Захиалгын тохиргоо</h2>
+          <p className="text-sm text-gray-600 mb-6">
+            Хэрэглэгчид цаг захиалах үед ашиглах тохиргоонууд
+          </p>
 
-          <div className="space-y-4">
+          <div className="space-y-6">
+            {/* Slot Interval */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Одоогийн имэйл
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Цагийн интервал
               </label>
-              <p className="text-gray-900 py-2 px-4 bg-gray-50 rounded-lg">
-                {providerData?.email || "—"}
+              <div className="grid grid-cols-3 gap-3">
+                {[15, 30, 60].map((interval) => (
+                  <button
+                    key={interval}
+                    type="button"
+                    onClick={() => setSlotInterval(interval)}
+                    className={`px-4 py-3 rounded-lg border-2 font-medium transition-all ${
+                      slotInterval === interval
+                        ? "border-indigo-600 bg-indigo-50 text-indigo-700"
+                        : "border-gray-300 bg-white text-gray-700 hover:border-indigo-300 hover:bg-gray-50"
+                    }`}
+                  >
+                    {interval} минут
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                💡 Үйлчилгээний үргэлжлэх хугацаа автоматаар дээшээ тоймлогдоно.
               </p>
             </div>
 
+            {/* Booking Window */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Шинэ имэйл хаяг
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Хэрэглэгчид харагдах долоо хоногийн хязгаарлалт
               </label>
-              <input
-                type="email"
-                value={emailForm.newEmail}
-                onChange={(e) =>
-                  setEmailForm({ ...emailForm, newEmail: e.target.value })
-                }
-                placeholder="example@gmail.com"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              />
+              <div className="grid grid-cols-4 gap-3">
+                {[1, 2, 3, 4].map((weeks) => (
+                  <button
+                    key={weeks}
+                    type="button"
+                    onClick={() => setBookingWindowWeeks(weeks)}
+                    className={`px-4 py-3 rounded-lg border-2 font-medium transition-all ${
+                      bookingWindowWeeks === weeks
+                        ? "border-indigo-600 bg-indigo-50 text-indigo-700"
+                        : "border-gray-300 bg-white text-gray-700 hover:border-indigo-300 hover:bg-gray-50"
+                    }`}
+                  >
+                    {weeks} {weeks === 1 ? "долоо хоног" : "долоо хоног"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Cancellation Policy */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Цуцлах бодлого (Хэдэн цагийн өмнө цуцлах боломжтой)
+              </label>
+              <div className="grid grid-cols-4 gap-3">
+                {[1, 2, 3, 6, 12, 24, 48, 72].map((hours) => (
+                  <button
+                    key={hours}
+                    type="button"
+                    onClick={() => setCancellationHours(hours)}
+                    className={`px-4 py-3 rounded-lg border-2 font-medium transition-all ${
+                      cancellationHours === hours
+                        ? "border-indigo-600 bg-indigo-50 text-indigo-700"
+                        : "border-gray-300 bg-white text-gray-700 hover:border-indigo-300 hover:bg-gray-50"
+                    }`}
+                  >
+                    {hours} {hours === 1 ? "цаг" : "цаг"}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                💡 Хэрэглэгчид цаг захиалгаасаа хэдэн цагийн өмнө цуцлах боломжтой болохыг тохируулна уу.
+              </p>
             </div>
 
             <Button
-              onClick={handleEmailUpdate}
-              disabled={loadingEmail}
+              onClick={handleBookingConfigUpdate}
+              disabled={loadingBookingConfig}
               className="w-full"
             >
-              {loadingEmail ? "Солиж байна..." : "Имэйл солих"}
+              {loadingBookingConfig ? "Хадгалж байна..." : "Тохиргоо хадгалах"}
             </Button>
           </div>
         </div>

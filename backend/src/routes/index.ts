@@ -6,6 +6,9 @@ import scheduleRoutes from "./schedule.routes";
 import slotsRoutes from "./slots.routes";
 import bookingRoutes from "./booking.routes";
 import auditRoutes from "./audit.routes";
+import notificationRoutes from "./notification.routes";
+import bookmarkRoutes from "./bookmark.routes";
+import adminRoutes from "./admin.routes";
 
 const router = Router();
 
@@ -48,5 +51,17 @@ router.use("/bookings", bookingRoutes);
 /* AUDIT LOGS */
 router.use("/audit-logs", auditRoutes);
 // This creates /api/audit-logs
+
+/* NOTIFICATIONS */
+router.use("/notifications", notificationRoutes);
+// This creates /api/notifications
+
+/* BOOKMARKS */
+router.use("/bookmarks", bookmarkRoutes);
+// This creates /api/bookmarks
+
+/* ADMIN */
+router.use("/admin", adminRoutes);
+// This creates /api/admin
 
 export default router;
