@@ -122,7 +122,7 @@ router.post("/", authMiddleware, async (req: any, res: Response) => {
         (appointmentMinutes <= bookingStartMinutes && serviceEndMinutes >= bookingEndMinutes)
       ) {
         return res.status(400).json({
-          msg: "Ene tsag alth hediin zaхialagudsans bayna",
+          msg: "Ene tsag ali hediinee zahialgdsan bn",
         });
       }
     }

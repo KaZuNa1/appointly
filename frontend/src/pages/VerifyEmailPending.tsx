@@ -26,7 +26,8 @@ export default function VerifyEmailPending() {
     setResendMessage("");
 
     try {
-      const res = await axios.post("http://localhost:4000/api/auth/resend-verification", {
+      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
+      const res = await axios.post(`${API_URL}/auth/resend-verification`, {
         email
       });
 

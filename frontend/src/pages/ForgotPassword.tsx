@@ -23,7 +23,8 @@ export default function ForgotPassword() {
       setLoading(true);
       setMessage("");
 
-      const res = await axios.post("http://localhost:4000/api/auth/forgot-password", {
+      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
+      const res = await axios.post(`${API_URL}/auth/forgot-password`, {
         email
       });
 

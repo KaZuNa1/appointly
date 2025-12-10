@@ -24,7 +24,8 @@ export default function VerifyEmail() {
       }
 
       try {
-        const res = await axios.post("http://localhost:4000/api/auth/verify-email", {
+        const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
+        const res = await axios.post(`${API_URL}/auth/verify-email`, {
           token
         });
 
