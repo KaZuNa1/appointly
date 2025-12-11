@@ -14,7 +14,7 @@ router.get("/", authMiddleware, async (req: any, res: Response) => {
       where: { userId },
       include: {
         hours: {
-          orderBy: { dayOfWeek: "asc" },
+          orderBy: { date: "asc" },
         },
       },
     });
@@ -59,7 +59,7 @@ router.post("/", authMiddleware, async (req: any, res: Response) => {
       .filter((day: any) => day.isOpen)
       .map((day: any) => ({
         providerId: provider.id,
-        dayOfWeek: day.dayOfWeek,
+        date: new Date(day.date), // Use date field
         openTime: day.openTime,
         closeTime: day.closeTime,
       }));
@@ -73,7 +73,7 @@ router.post("/", authMiddleware, async (req: any, res: Response) => {
     // Fetch updated hours
     const updatedHours = await prisma.workingHours.findMany({
       where: { providerId: provider.id },
-      orderBy: { dayOfWeek: "asc" },
+      orderBy: { date: "asc" },
     });
 
     return res.json({

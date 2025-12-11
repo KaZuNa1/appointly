@@ -197,6 +197,11 @@ export const login = async (req: Request, res: Response) => {
     if (!user)
       return res.status(400).json({ msg: "Имэйл буруу байна." });
 
+    // Check if user has a password (not Google OAuth user)
+    if (!user.password) {
+      return res.status(400).json({ msg: "Энэ имэйл Google-ээр бүртгэгдсэн байна. Google-ээр нэвтэрнэ үү." });
+    }
+
     const ok = await bcrypt.compare(password, user.password);
     if (!ok)
       return res.status(400).json({ msg: "Нууц үг буруу байна." });

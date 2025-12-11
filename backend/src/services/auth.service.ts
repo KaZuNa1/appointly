@@ -62,6 +62,7 @@ export class AuthService {
       data: {
         userId: user.id,
         businessName,
+        nickname: businessName, // Use businessName as default nickname
         category,
         phone,
       },
@@ -81,6 +82,11 @@ export class AuthService {
 
     if (!user) {
       throw new Error("Имэйл эсвэл нууц үг буруу байна.");
+    }
+
+    // Check if user has a password (not Google OAuth user)
+    if (!user.password) {
+      throw new Error("Энэ имэйл Google-ээр бүртгэгдсэн байна. Google-ээр нэвтэрнэ үү.");
     }
 
     const passOk = await bcrypt.compare(password, user.password);

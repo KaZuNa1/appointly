@@ -33,7 +33,7 @@ export async function logAudit(
  */
 export async function logBookingAction(
   userId: string,
-  action: "BOOKING_CREATED" | "BOOKING_CANCELLED" | "BOOKING_CONFIRMED",
+  action: "BOOKING_CREATED" | "BOOKING_CANCELLED" | "BOOKING_CONFIRMED" | "BOOKING_CANCELLED_BY_PROVIDER",
   bookingId: string,
   details?: any
 ) {
@@ -44,7 +44,7 @@ export async function logBookingAction(
  * Log a login action
  */
 export async function logLogin(userId: string, details?: any) {
-  await logAudit(userId, "LOGIN", null, details);
+  await logAudit(userId, "LOGIN", undefined, details);
 }
 
 /**
@@ -52,8 +52,8 @@ export async function logLogin(userId: string, details?: any) {
  */
 export async function logProfileUpdate(
   userId: string,
-  entityId: string,
+  entityId: string | null,
   changes: any
 ) {
-  await logAudit(userId, "PROFILE_UPDATED", entityId, { changes });
+  await logAudit(userId, "PROFILE_UPDATED", entityId || undefined, { changes });
 }

@@ -81,9 +81,6 @@ router.get("/recent-activity", adminMiddleware, async (req: any, res: Response) 
     const recentLogs = await prisma.auditLog.findMany({
       orderBy: { timestamp: "desc" },
       take: limit,
-      include: {
-        // Note: AuditLog doesn't have relation to User in schema, we'll join manually
-      },
     });
 
     // Fetch user details for each log

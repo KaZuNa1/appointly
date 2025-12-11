@@ -158,6 +158,8 @@ router.get("/weekly-slots/:providerId", optionalAuthMiddleware, async (req: any,
         },
       });
 
+      console.log(`[DEBUG] Date: ${dateISO}, Bookings found: ${bookings.length}, Current User: ${currentUserId || 'NOT LOGGED IN'}`);
+
       // Create sets for booked times and user's own bookings
       const bookedTimes = new Set<string>();
       const userBookedTimes = new Set<string>();
@@ -167,6 +169,8 @@ router.get("/weekly-slots/:providerId", optionalAuthMiddleware, async (req: any,
         const hours = appointmentDate.getHours().toString().padStart(2, "0");
         const minutes = appointmentDate.getMinutes().toString().padStart(2, "0");
         const timeString = `${hours}:${minutes}`;
+
+        console.log(`[DEBUG] Booking at ${timeString}, Customer: ${booking.customerId}, Service: ${booking.service.name}`);
 
         // Mark slot as booked
         bookedTimes.add(timeString);
@@ -201,11 +205,19 @@ router.get("/weekly-slots/:providerId", optionalAuthMiddleware, async (req: any,
         const isBooked = bookedTimes.has(time);
         const isUserBooked = userBookedTimes.has(time);
 
+        const status = isPast ? "past" : isUserBooked ? "user-booked" : isBooked ? "booked" : "available";
+
+        if (isBooked) {
+          console.log(`[DEBUG] Slot ${time} on ${dateISO} marked as ${status} (isBooked: ${isBooked}, isUserBooked: ${isUserBooked})`);
+        }
+
         return {
           time,
-          status: isPast ? "past" : isUserBooked ? "user-booked" : isBooked ? "booked" : "available",
+          status,
         };
       });
+
+      console.log(`[DEBUG] Date ${dateISO} - Total slots: ${slots.length}, Booked: ${Array.from(bookedTimes).join(', ')}, User's: ${Array.from(userBookedTimes).join(', ')}`);
 
       weekDays.push({
         date: dateISO,
@@ -214,6 +226,11 @@ router.get("/weekly-slots/:providerId", optionalAuthMiddleware, async (req: any,
         slots,
       });
     }
+
+    // Disable caching for real-time slot availability
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
 
     return res.json({
       weekRange: formatWeekRange(weekStart),
@@ -605,19 +622,6 @@ router.post("/bulk-delete", authMiddleware, requireRole(["PROVIDER"]), async (re
         date: {
           gte: effectiveStart,
           lte: end,
-        },
-      },
-      include: {
-        _count: {
-          select: {
-            appointments: {
-              where: {
-                status: {
-                  in: ["PENDING", "CONFIRMED"],
-                },
-              },
-            },
-          },
         },
       },
     });
