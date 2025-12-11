@@ -13,7 +13,9 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "https://appointly-bay.vercel.app",
+      "https://appointly-lyart.vercel.app", // Current Vercel URL
+      "https://appointly.space", // Custom domain
+      "https://www.appointly.space", // Custom domain with www
     ],
     credentials: true,
   })
